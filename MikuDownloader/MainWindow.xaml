@@ -17,12 +17,14 @@
         <DockPanel>
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="_File">
-                    <MenuItem Header="_Open"/>
-                    <MenuItem Header="_Close"/>
-                    <MenuItem Header="_Save"/>
+                    <MenuItem x:Name="menuOpenDirectory" Header="Open Directory" Click="menuOpenDirectory_Click"/>
+                    <MenuItem x:Name="menuClose" Header="Exit"/>
                 </MenuItem>
-                <MenuItem Header="_Other">
-                    <MenuItem Header="_Help"/>
+                    <MenuItem Header="Help">
+                        <MenuItem x:Name="menuFromFile" Header="From File" Click="menuFromFile_Click"/>
+                        <MenuItem x:Name="menuFromURL" Header="From URL" Click="menuFromURL_Click"/>
+                        <MenuItem x:Name="menuFromList" Header="From List" Click="menuFromList_Click"/>
+                        <MenuItem x:Name="menuFromFolder" Header="From Folder" Click="menuFromFolder_Click"/>
                 </MenuItem>
             </Menu>
             <StackPanel></StackPanel>

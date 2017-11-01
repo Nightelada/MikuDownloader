@@ -40,5 +40,7 @@
         public static string SecondaryLogFileName = "folder-downloaded-images-log.txt";
 
         public static string VeryLongLine = "------------------------------------------------------------------------------------";
+
+        public static string FromFileHelpText = "Select an image file (.jpg, .png, .gif) from the opened explorer menu";
     }
 }

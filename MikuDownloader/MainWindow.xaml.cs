@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 
 namespace MikuDownloader
 {
@@ -217,5 +219,44 @@ namespace MikuDownloader
             btnNewFile.IsEnabled = true;
         }
 
+        private void menuOpenDirectory_Click(object sender, RoutedEventArgs e)
+        {
+            if (Directory.Exists(Constants.MainDownloadDirectory))
+            {
+                Process.Start(Constants.MainDownloadDirectory);
+            }
+            else
+            {
+                MessageBox.Show("Nothing has been downloaded yet!", "Info");
+            }
+        }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        // TODO: Add kawaii icons for all buttons
+        // promeni error message - pri download from url (isntead of having me try th..)
+        private void menuFromFile_Click(object sender, RoutedEventArgs e)
+        {
+            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromFileHelpText);
+            tempHelpWindow.Show();
+        }
+
+        private void menuFromURL_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void menuFromList_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void menuFromFolder_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }
