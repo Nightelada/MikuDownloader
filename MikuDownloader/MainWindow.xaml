@@ -5,29 +5,30 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MikuDownloader"
         mc:Ignorable="d"
-        Title="MikuDownloader" Height="350" Width="673" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" MinWidth="673" MinHeight="350">
+        Title="MikuDownloader" Height="350" Width="729" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" MinWidth="673" MinHeight="350">
     <Grid>
-        <TextBox x:Name="txtBoxURL" HorizontalAlignment="Left" Height="23" Margin="23,128,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="179"/>
-        <TextBlock HorizontalAlignment="Left" Margin="23,107,0,0" TextWrapping="Wrap" Text="Type URL of picture here:" VerticalAlignment="Top"/>
-        <TextBox x:Name="txtBlockData" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" Margin="284,44,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="242" Width="356"/>
-        <Button x:Name="btnDownloadSingleImage" Content="From URL" HorizontalAlignment="Left" Margin="23,166,0,0" VerticalAlignment="Top" Width="75" Click="btnDownloadSingleImage_Click"/>
-        <Button x:Name="btnNewFile" Content="From File" HorizontalAlignment="Left" Margin="23,70,0,0" VerticalAlignment="Top" Width="75" Click="btnNewFile_Click"/>
-        <Button x:Name="btnDownloadFromList" Content="Download from list" HorizontalAlignment="Left" Margin="23,223,0,0" VerticalAlignment="Top" Width="133" Click="btnDownloadFromList_Click"/>
-        <Button x:Name="btnDownloadFromFolder" Content="Download from folder" HorizontalAlignment="Left" Margin="23,260,0,0" VerticalAlignment="Top" Width="133" Click="btnDownloadFromFolder_Click"/>
-        <DockPanel>
+        <DockPanel Margin="0,0,0,303">
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="_File">
                     <MenuItem x:Name="menuOpenDirectory" Header="Open Directory" Click="menuOpenDirectory_Click"/>
-                    <MenuItem x:Name="menuClose" Header="Exit"/>
+                    <MenuItem x:Name="menuClose" Header="Exit" Click="menuClose_Click"/>
                 </MenuItem>
-                    <MenuItem Header="Help">
-                        <MenuItem x:Name="menuFromFile" Header="From File" Click="menuFromFile_Click"/>
-                        <MenuItem x:Name="menuFromURL" Header="From URL" Click="menuFromURL_Click"/>
-                        <MenuItem x:Name="menuFromList" Header="From List" Click="menuFromList_Click"/>
-                        <MenuItem x:Name="menuFromFolder" Header="From Folder" Click="menuFromFolder_Click"/>
+                <MenuItem Header="Help">
+                    <MenuItem x:Name="menuFromFile" Header="From File" Click="menuFromFile_Click"/>
+                    <MenuItem x:Name="menuFromURL" Header="From URL" Click="menuFromURL_Click"/>
+                    <MenuItem x:Name="menuFromList" Header="From List" Click="menuFromList_Click"/>
+                    <MenuItem x:Name="menuFromFolder" Header="From Folder" Click="menuFromFolder_Click"/>
                 </MenuItem>
             </Menu>
-            <StackPanel></StackPanel>
         </DockPanel>
+        <TextBlock HorizontalAlignment="Left" Margin="23,46,0,0" TextWrapping="Wrap" Text="Type URL of picture here:" VerticalAlignment="Top"/>
+        <TextBox x:Name="txtBoxURL" HorizontalAlignment="Left" Height="59" Margin="23,67,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="179"/>
+        <Button x:Name="btnDownloadSingleImage" Content="From URL" HorizontalAlignment="Left" Margin="209,70,0,0" VerticalAlignment="Top" Width="75" Click="btnDownloadSingleImage_Click"/>
+        <TextBox x:Name="txtBlockData" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" Margin="312,46,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="242" Width="389"/>
+        <Button x:Name="btnDownloadFromList" Content="Download from list" HorizontalAlignment="Left" Margin="23,146,0,0" VerticalAlignment="Top" Width="133" Click="btnDownloadFromList_Click"/>
+        <Button x:Name="btnNewFile" Content="From File" HorizontalAlignment="Left" Margin="23,233,0,0" VerticalAlignment="Top" Width="75" Click="btnNewFile_Click"/>
+        <Button x:Name="btnDownloadFromFolder" Content="Download from folder" HorizontalAlignment="Left" Margin="23,260,0,0" VerticalAlignment="Top" Width="133" Click="btnDownloadFromFolder_Click"/>
+        <CheckBox x:Name="chkBoxIgnoreResolution" Content="Ignore resolution" HorizontalAlignment="Left" Margin="170,241,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="chkBoxKeepFilenames" Content="Keep filenames" HorizontalAlignment="Left" Margin="170,265,0,0" VerticalAlignment="Top"/>
     </Grid>
 </Window>

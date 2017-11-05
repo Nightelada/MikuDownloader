@@ -52,13 +52,13 @@ namespace MikuDownloader
                     {
                         if (ex.InnerException != null)
                         {
-                            status += String.Format("Original image: {0}\nFailed to download image!\n{1}\n{2}\n", imageURL, ex.Message, ex.InnerException.Message);
+                            status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
                         }
                         else
                         {
-                            status += String.Format("Original image: {0}\nFailed to download image!\n", imageURL);
+                            status += String.Format("Failed to download image!\n");
                         }
-                        txtBlockData.Text = ex.Message + "\nContact pepkata when troubled!";
+                        txtBlockData.Text = ex.Message;
                     }
                     finally
                     {
@@ -74,8 +74,7 @@ namespace MikuDownloader
             {
                 txtBlockData.Text = "No URL!";
             }
-
-
+            
             ReleaseAllButtons();
         }
 
@@ -99,8 +98,9 @@ namespace MikuDownloader
                     if (imageList != null && imageList.Count > 0)
                     {
                         var res = ImageHelper.GetResolution(filename);
+                        bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
 
-                        if (imageList.First().Resolution.Equals(res))
+                        if (imageList.First().Resolution.Equals(res) && ignoreResolution != true)
                         {
                             status += "Image checked had same resolution! Image was not downloaded! If you want to download it anyway check the logs!\n";
                         }
@@ -110,14 +110,12 @@ namespace MikuDownloader
                             status += "Successfully downoaded image!\n";
                         }
                     }
-                    File.AppendAllText(ImageHelper.GetLogFileName(), ImageHelper.GetLogTimestamp() + status);
-
                     txtBlockData.Text = status;
                 }
                 catch (Exception ex)
                 {
-                    status += String.Format("Original image: {0}\nFailed to download image!\n{1}\n{2}\n", filename, ex.Message, String.IsNullOrEmpty(ex.InnerException.Message) ? ex.InnerException.Message : string.Empty);
-                    txtBlockData.Text = ex.Message + "\nContact pepkata when troubled!";
+                    status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, String.IsNullOrEmpty(ex.InnerException.Message) ? ex.InnerException.Message : string.Empty);
+                    txtBlockData.Text = ex.Message;
                 }
                 finally
                 {
@@ -187,7 +185,11 @@ namespace MikuDownloader
                 if (images != null && images.Count > 0)
                 {
                     txtBlockData.Text = "Downloading images...";
-                    await ImageHelper.DownloadBulkImagesFromFolder(images);
+                    bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
+                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
+                    
+                    await ImageHelper.DownloadBulkImagesFromFolder(images, keepFilenames, ignoreResolution);
+
                     txtBlockData.Text = "Finished downloading images! Check log for more info!";
                 }
                 else
@@ -219,6 +221,7 @@ namespace MikuDownloader
             btnNewFile.IsEnabled = true;
         }
 
+        // opens the main download directory in the explorer
         private void menuOpenDirectory_Click(object sender, RoutedEventArgs e)
         {
             if (Directory.Exists(Constants.MainDownloadDirectory))
@@ -257,6 +260,11 @@ namespace MikuDownloader
         private void menuFromFolder_Click(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        private void menuClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
         }
     }
 }

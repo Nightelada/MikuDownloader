@@ -1,5 +1,6 @@
 ﻿using MikuDownloader.enums;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace MikuDownloader
@@ -9,7 +10,7 @@ namespace MikuDownloader
         public string PostURL { get; set; }
         public string PostID { get; set; }
         public string Source { get; set; }
-        public string Tags { get; set; }
+        public List<string> Tags { get; set; }
         public string Resolution { get; set; }
         public string OriginalURL { get; set; }
         public string Similarity { get; set; }
@@ -29,7 +30,8 @@ namespace MikuDownloader
                 PostURL = post;
             }
             Source = src;
-            Tags = tag;
+            Tags = new List<string>();
+            SetTags(tag);
             Resolution = res;
             Similarity = sim;
             SetMatchType(mType);
@@ -45,10 +47,7 @@ namespace MikuDownloader
             // get only post ID number
             var temp = PostURL.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             PostID = temp.Last();
-
-            // get only tags
-            Tags = Tags.Substring(Tags.IndexOf("Tags: ") + "Tags: ".Length);
-
+            
             // get only resolution
             string[] strAparams = Resolution.Split(new char[] { '×', ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (strAparams != null && strAparams.Length > 2)
@@ -195,6 +194,7 @@ namespace MikuDownloader
         {
             string[] tempStringArray = Source.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             ImageName = tempStringArray.Last();
+            // TODO: make with constants and foreach with linq
             if (ImageName.Contains(".jpg"))
             {
                 ImageName = ImageName.Remove(ImageName.IndexOf(".jpg"));
@@ -210,6 +210,35 @@ namespace MikuDownloader
             else if (ImageName.Contains(".jpeg"))
             {
                 ImageName = ImageName.Remove(ImageName.IndexOf(".jpeg"));
+            }
+        }
+
+        private void SetTags(string tag)
+        {
+            string tagLine;
+            string[] parsedTagLine;
+            // get only tags
+            tagLine = tag.Substring(tag.IndexOf("Tags: ") + "Tags: ".Length);
+            // check if tag separator is ','
+            parsedTagLine = tagLine.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parsedTagLine != null && parsedTagLine.Count() > 1)
+            {
+                foreach (string singleTag in parsedTagLine)
+                {
+                    Tags.Add(singleTag);
+                }
+            }
+            else
+            {
+                // check if separator is ' '
+                parsedTagLine = tagLine.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parsedTagLine != null && parsedTagLine.Count() > 1)
+                {
+                    foreach (string singleTag in parsedTagLine)
+                    {
+                        Tags.Add(singleTag);
+                    }
+                }
             }
         }
     }

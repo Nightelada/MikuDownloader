@@ -17,155 +17,6 @@ namespace MikuDownloader
 {
     public static class ImageHelper
     {
-        // Functions for using the imgur api to work with images
-        #region Imgur API
-
-        // Uploads the picture to Imgur with the given URL, using credentials from Constants
-        public static string PostToImgur(string imageURL, out bool success)
-        {
-            using (var wc = new WebClient())
-            {
-                //if random errors try using this 
-                wc.Headers.Add("user-agent", Constants.UserAgentHeader);
-
-                wc.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
-                //wc.Headers.Add("Authorization", "Client-ID dcd596649fca845");
-                wc.Headers.Add("Authorization", Constants.AuthorizationHeader);
-
-
-                var values = new NameValueCollection { { "image", imageURL } };
-                byte[] response = null;
-
-                try
-                {
-                    response = wc.UploadValues(Constants.UploadImageEndpoint, values);
-
-                    string jsonString = wc.Encoding.GetString(response);
-
-                    dynamic parsedJson = JObject.Parse(jsonString);
-
-                    string uploadedImageURL = parsedJson.data.link;
-
-                    success = bool.Parse(parsedJson.success.ToString());
-
-                    File.AppendAllText(@"D:\image-urls.txt", GetLogTimestamp() + uploadedImageURL + "\n");
-
-                    return uploadedImageURL;
-                }
-                catch (WebException ex)
-                {
-                    success = false;
-                    var resp = new StreamReader(ex.Response.GetResponseStream()).ReadToEnd();
-
-                    dynamic parsedJson = JObject.Parse(resp);
-
-                    var messageFromServer = parsedJson.data.error.message;
-
-                    File.AppendAllText(@"D:\failed-image-urls.txt", "Failed to upload picture!" + GetLogTimestamp() + "\n" + messageFromServer + "\n");
-
-                    return messageFromServer;
-                }
-                catch (Exception ex)
-                {
-                    success = false;
-
-                    File.AppendAllText(@"D:\failed-image-urls.txt", "Failed to upload picture!" + GetLogTimestamp() + "\n" + ex.Message + "\n");
-
-                    return ex.Message;
-                }
-            }
-        }
-
-        // gets Imgur links from URLs of imgur posts
-        public static List<string> GetImgurURLs(List<string> imageURLs, out bool success)
-        {
-            success = false;
-            List<string> listOfURLs = new List<string>();
-
-            foreach (string imageURL in imageURLs)
-            {
-                using (var wc = new WebClient())
-                {
-                    wc.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
-                    //wc.Headers.Add("Authorization", Constants.AuthorizationHeader);
-                    wc.Headers.Add("Authorization", Constants.ClientIDHeader);
-
-
-
-                    var imageId = imageURL.Split(new char[] { ' ', '/' }, StringSplitOptions.RemoveEmptyEntries).Last();
-                    byte[] response = null;
-
-                    try
-                    {
-                        response = wc.DownloadData(Constants.UploadImageEndpoint + "/" + imageId);
-
-                        string jsonString = wc.Encoding.GetString(response);
-
-                        dynamic parsedJson = JObject.Parse(jsonString);
-
-                        string uploadedImageURL = parsedJson.data.link;
-                        listOfURLs.Add(uploadedImageURL);
-
-                        success = bool.Parse(parsedJson.success.ToString());
-
-                    }
-                    catch (WebException ex)
-                    {
-                        success = false;
-                        var resp = new StreamReader(ex.Response.GetResponseStream()).ReadToEnd();
-
-                        dynamic parsedJson = JObject.Parse(resp);
-
-                        var messageFromServer = parsedJson.data.error.message;
-
-                        throw new Exception("Couldn't get image link!\n" + ex.Message);
-                    }
-                    catch (Exception ex)
-                    {
-                        success = false;
-                        throw new Exception("Couldn't get image link!\n" + ex.Message);
-                    }
-                }
-            }
-            return listOfURLs;
-        }
-
-        // Uploads all files from a directory to imgur
-        public static Dictionary<string, string> MassUpload(Dictionary<string, string> files)
-        {
-            Dictionary<string, string> imgurToOriginalImage = new Dictionary<string, string>();
-
-            foreach (KeyValuePair<string, string> kvp in files)
-            {
-                // for sedning files
-                var image = Convert.ToBase64String(File.ReadAllBytes(kvp.Value));
-
-                // for sending URLs
-                //var image = kvp.Value;
-
-                bool success = false;
-                try
-                {
-                    var imageURL = PostToImgur(image, out success);
-                    // handle different types of errors
-                    if (!success)
-                    {
-                        throw new ArgumentException("Could not upload picture!\n" + imageURL);
-                    }
-                    imgurToOriginalImage.Add(kvp.Key, imageURL);
-                    Thread.Sleep(5000);
-                }
-                catch (Exception ex)
-                {
-                    int breakPoint = 0;
-                }
-            }
-            return imgurToOriginalImage;
-        }
-
-        #endregion
-
-
         // compares 2 different resolutions
         private static string CompareResolutions(string resA, string resB, out long numRes)
         {
@@ -272,7 +123,8 @@ namespace MikuDownloader
             var err = htmlDoc.DocumentNode.SelectSingleNode(".//div[@class='err']");
             if (err != null)
             {
-                response += "Image search failed!\n" + err.InnerText + "\n";
+                response += String.Format("Image search failed!\n{0}\nSupported file types are JPEG, PNG and GIF\nMaximum file size: 8192 KB\nMaximum image dimensions: 7500x7500\n",
+                    err.InnerText);
                 status = response;
                 return null;
             }
@@ -294,7 +146,7 @@ namespace MikuDownloader
                     {
                         if (File.Exists(originalImage))
                         {
-                            response += String.Format("No Relevant images found for\n{0}!\nCheck TinEye, SauceNAO or Google for more matches!\n", originalImage);
+                            response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain);
 
                             status = response;
                             return null;
@@ -351,8 +203,8 @@ namespace MikuDownloader
                         if (imageLink != null && postId != null && tags != null && resolution != null)
                         {
                             ImageDetails tempImg = new ImageDetails(postId, imageLink, tags, resolution, similarity, matchType);
-
                             tempImg.OriginalURL = originalImage;
+                            imagesList.Add(tempImg);
 
                             if (!tempImg.Source.Equals("Unavailable"))
                             {
@@ -360,7 +212,6 @@ namespace MikuDownloader
                                 {
                                     resolutions.Add(tempImg.Resolution);
                                 }
-                                imagesList.Add(tempImg);
                             }
                             else
                             {
@@ -384,7 +235,7 @@ namespace MikuDownloader
                             if (image.Resolution.Equals(bestResoltuion))
                             {
                                 bestImages.Add(image);
-                                response += String.Format("Match: {0}\n", image.PostURL);
+                                response += String.Format("{0}: {1} Similarity: {2}\n", image.MatchType.ToString(), image.PostURL, image.Similarity);
                             }
                             if (image.Resolution.Equals("Unavailable"))
                             {
@@ -394,7 +245,7 @@ namespace MikuDownloader
                     }
                     else
                     {
-                        response += "Image search failed! You should not see this code. Speak to pepkata to fix it!!\n";
+                        response += "Image search failed! You should not see this code!\n";
                         status = response;
                         return null;
                     }
@@ -406,7 +257,7 @@ namespace MikuDownloader
             }
             else
             {
-                response += "Failed to parse documents after finding matches. Speak to pepkata to fix it!\n";
+                response += "Failed to parse documents after finding matches!\n";
 
                 status = response;
                 return null;
@@ -512,21 +363,58 @@ namespace MikuDownloader
 
             string origImage = string.Empty;
 
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div/ul/li/a[@class='original-file-unchanged']");
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div/ul/li/a[@class='original-file-unchanged' or @class='original-file-changed']");
 
-            foreach (var node in nodes)
+            if (nodes != null)
             {
-                origImage = node.GetAttributeValue("href", null);
+                foreach (var node in nodes)
+                {
+                    origImage = node.GetAttributeValue("href", null);
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse yande.re image!");
+                }
             }
-            if (string.IsNullOrEmpty(origImage))
+            else
             {
-                throw new ArgumentException("Failed to parse yande.re image!");
+                throw new ArgumentException("Error when parsing yande.re image! Image was probably deleted");
             }
 
             SaveImage(folderPath, origImage, imageName);
         }
 
-        // parses yande.re result to get best res link without searching many times
+        // parses zerochan result to get best res link without searching many times
+        private static void SaveZerochanImage(string folderPath, string postURL, string imageName)
+        {
+            HtmlWeb web = new HtmlWeb();
+
+            HtmlDocument htmlDoc = web.Load(postURL);
+
+            string origImage = string.Empty;
+
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='content']/div/img");
+
+            if (nodes != null)
+            {
+                foreach (var node in nodes)
+                {
+                    origImage = node.GetAttributeValue("src", null);
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse zerochan image!");
+                }
+            }
+            else
+            {
+                throw new ArgumentException("Error when parsing zerochan image! Image was probably deleted");
+            }
+
+            SaveImage(folderPath, origImage, imageName);
+        }
+
+        // parses e-shuushuu result to get best res link without searching many times
         private static void SaveEshuushuuImage(string folderPath, string postURL, string imageName)
         {
             HtmlWeb web = new HtmlWeb();
@@ -550,13 +438,62 @@ namespace MikuDownloader
             SaveImage(folderPath, origImage, imageName);
         }
 
+        // parses Anime-Pictures result to get best res link without searching many times
+        private static void SaveAnimePicturesImage(string folderPath, string postURL, string imageName)
+        {
+            HtmlWeb web = new HtmlWeb();
+
+            HtmlDocument htmlDoc = web.Load(postURL);
+
+            string origImage = string.Empty;
+
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='content']/div/div[@id='big_preview_cont']/a");
+
+            foreach (var node in nodes)
+            {
+                origImage = node.GetAttributeValue("href", null);
+            }
+            if (string.IsNullOrEmpty(origImage))
+            {
+                throw new ArgumentException("Failed to parse Anime-Pictures image!");
+            }
+            origImage = String.Format("https://anime-pictures.net{0}", origImage);
+
+            SaveImage(folderPath, origImage, imageName);
+        }
+
+        // parses The Anime Gallery result to get best res link without searching many times
+        private static void SaveTheAnimeGalleryImage(string folderPath, string postURL, string imageName)
+        {
+            HtmlWeb web = new HtmlWeb();
+
+            HtmlDocument htmlDoc = web.Load(postURL);
+
+            string origImage = string.Empty;
+
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@class='download']/a");
+
+            foreach (var node in nodes)
+            {
+                origImage = node.GetAttributeValue("href", null);
+            }
+            if (string.IsNullOrEmpty(origImage))
+            {
+                throw new ArgumentException("Failed to parse The Anime Gallery image!");
+            }
+            origImage = String.Format("www.theanimegallery.com{0}", origImage);
+
+            SaveImage(folderPath, origImage, imageName);
+        }
+
+
         // downloads best image from a set of sites provided
         public static void DownloadBestImage(List<ImageDetails> images, string fileName = "")
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd");
             var folderPath = Path.Combine(Constants.MainDownloadDirectory, currTime.ToString());
 
-            // somehow try to distinguish files with differences!
+            // somehow try to distinguish files with differences! 
             if (images != null && images.Count > 0)
             {
                 bool sankakuFlag = false;
@@ -587,7 +524,6 @@ namespace MikuDownloader
                     eshuushuuFlag = true;
                 }
                 
-                // this loop downloads all available version of the image if it is from sankaku, danbooru or gelbooru, else it just downloads first found
                 foreach (ImageDetails image in images)
                 {
                     try
@@ -617,15 +553,33 @@ namespace MikuDownloader
                         else if (image.MatchSource == MatchSource.Yandere && !gelbooruFlag && !danbooruFlag && !sankakuFlag)
                         {
                             SaveYandereImage(folderPath, image.PostURL, imageName);
+                            break;
                         }
                         else if (image.MatchSource == MatchSource.Eshuushuu && !yandereFlag && !gelbooruFlag && !danbooruFlag && !sankakuFlag)
                         {
                             SaveEshuushuuImage(folderPath, image.PostURL, imageName);
+                            break;
                         }
                         else if (!eshuushuuFlag && !yandereFlag && !gelbooruFlag && !danbooruFlag && !sankakuFlag)
                         {
-                            // TODO: FIX - zerochan not working, others shouldn't work either (animeplanet, animegallery)
-                            SaveImage(folderPath, image.Source, imageName);
+                            if (image.MatchSource == MatchSource.Zerochan)
+                            {
+                                SaveZerochanImage(folderPath, image.PostURL, imageName);
+                            }
+                            //probbaly works
+                            else if (image.MatchSource == MatchSource.AnimePictures)
+                            {
+                                SaveAnimePicturesImage(folderPath, image.PostURL, imageName);
+                            }
+                            // doesn't work
+                            else if (image.MatchSource == MatchSource.TheAnimeGallery)
+                            {
+                                SaveTheAnimeGalleryImage(folderPath, image.PostURL, imageName);
+                            }
+                            else
+                            {
+                                throw new ArgumentException("Uknown parse source site!\n");
+                            }
                             break;
                         }
                         Thread.Sleep(1000);//anti-ban
@@ -644,22 +598,7 @@ namespace MikuDownloader
                 throw new ArgumentException("No images found in collection! Pages were not parsed correctly! Download picture manually from links!\n");
             }
         }
-
-        // downloads all the URLs from a selected file to the directory provided with names 1.jpg, 2.png, 3.gif etc...
-        public static void QuickSaveImages(string directory)
-        {
-            string fileName = BrowseFile(Constants.TextFilter);
-
-            List<string> manyImages = ParseURLs(fileName);
-
-            int i = 1;
-            foreach (string s in manyImages)
-            {
-                var imageName = SaveImage(directory, s, i.ToString());
-                i++;
-            }
-        }
-
+        
         // saves the image from the given url, to the selected path, with the given filename (extension is generated dynamically)
         public static string SaveImage(string directory, string imageURL, string imageName)
         {
@@ -765,9 +704,6 @@ namespace MikuDownloader
         // reads links from file, uploads them to imgur, and downloads files 1 by 1
         public async static Task<string> DownloadBulkImages(List<string> URLsToDownload)
         {
-            // parse links from imgur post links to direct ones
-            //List<string> imgurDirectURLs = GetImgurURLs(URLsToDownload, out bool success);
-
             foreach (string imageURL in URLsToDownload)
             {
                 string status = string.Empty;
@@ -787,11 +723,11 @@ namespace MikuDownloader
                 {
                     if (ex.InnerException != null)
                     {
-                        status += String.Format("Original image: {0}\nFailed to download image!\n{1}\n{2}\n", imageURL, ex.Message, ex.InnerException.Message);
+                        status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
                     }
                     else
                     {
-                        status += String.Format("Original image: {0}\nFailed to download image!\n{1}\n", imageURL, ex.Message);
+                        status += String.Format("Failed to download image!\n{0}\n", ex.Message);
                     }
                 }
                 finally
@@ -804,7 +740,7 @@ namespace MikuDownloader
         }
 
         // reads links from file, uploads them to imgur, and downloads files 1 by 1
-        public async static Task<string> DownloadBulkImagesFromFolder(List<string> imagesToDownload)
+        public async static Task<string> DownloadBulkImagesFromFolder(List<string> imagesToDownload, bool? keepFilenames = true, bool? ignoreResolution = false)
         {
             string secondaryLog = String.Format("Begin checking of files for folder: {0}\n", Path.GetDirectoryName(imagesToDownload.First()));
             string totalDownloadedImages = string.Empty;
@@ -827,12 +763,20 @@ namespace MikuDownloader
                             string fileResolution = GetResolution(file);
                             string matchResolution = imageList.First().Resolution;
 
-                            if (!matchResolution.Equals(fileResolution))
+                            if (!matchResolution.Equals(fileResolution) || ignoreResolution == true)
                             {
-                                string origImageName = Path.GetFileNameWithoutExtension(file);
+                                string origImageName;
+                                if (keepFilenames == true)
+                                {
+                                    origImageName = Path.GetFileNameWithoutExtension(file);
+                                }
+                                else
+                                {
+                                    origImageName = String.Empty;
+                                }
                                 DownloadBestImage(imageList, origImageName);
-                                status += "\nSuccessfully downoaded image!\n";
-                                secondaryLog += String.Format("Image with better resolution was found!\nOriginal res: {0} - new res: {1}\n", fileResolution, matchResolution);
+                                status += "Successfully downoaded image!\n";
+                                secondaryLog += String.Format("Image with better resolution was found or resolution is being ignored!\nOriginal res: {0} - new res: {1}\n", fileResolution, matchResolution);
                                 totalDownloadedImages += Path.GetFileName(file) + "\n";
                             }
                             else
