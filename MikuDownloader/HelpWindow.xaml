@@ -5,11 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MikuDownloader"
         mc:Ignorable="d"
-        Title="Help" Height="213.411" Width="488.047" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Deactivated="Window_Deactivated" Closing="Window_Closing">
+        Title="Help" Height="240.694" Width="529.88" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Deactivated="Window_Deactivated" Closing="Window_Closing">
     <Window.Background>
         <SolidColorBrush Color="CornflowerBlue"/>
     </Window.Background>
     <Grid>
-        <TextBlock x:Name="txtBlockInfo" HorizontalAlignment="Left" Foreground="Aqua" Margin="41,34,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="118" Width="417"/>
+        <TextBlock x:Name="txtBlockInfo" HorizontalAlignment="Left" Foreground="Aqua" Margin="10,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="192" Width="504"/>
     </Grid>
 </Window>

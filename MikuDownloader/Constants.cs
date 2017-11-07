@@ -32,8 +32,8 @@
         public static string YandereStart = "files.yande.re/image";
         public static string KonachanStart = "konachan.com/image";
         public static string AnimePicturesStart = "anime-pictures.net/pictures/get_image";
-
         public static string EshuushuuStart = "http://e-shuushuu.net/";
+        public static string TheAnimeGalleryErrorMessage = "The Anime Gallery images must be downloaded manually! Check links above!";
 
         public static string MainDownloadDirectory = "MikuDownloaderImages";
         public static string MainLogFileName = "downloaded-images-log.txt";
@@ -41,6 +41,27 @@
 
         public static string VeryLongLine = "------------------------------------------------------------------------------------";
 
-        public static string FromFileHelpText = "Select an image file (.jpg, .png, .gif) from the opened explorer menu";
+        public static string FromFileHelpText = "Downloading image from file:\n\nSelect an image file (.jpg, .png, .gif) from the opened explorer menu" +
+            "\nYou can choose to keep the original filename (to replace it easier after download)" +
+            "\nand you can also choose to download image even if a duplicate resolution found\n" +
+            "Image will be automatically downloaded if found\n" +
+            "After image is downloaded you can view it in the download directory";
+
+        public static string FromURLHelpText = "Downloading image from URL:\n\nPaste an existing image link into the text box" +
+           "\nClick From URL button" +
+           "\nImage will be automatically downloaded if found\n" +
+           "After image is downloaded you can view it in the download directory";
+
+        public static string FromListHelpText = "Downloading image from list:\n\nCreate a .txt file with links to images from the Internet" +
+           "\nEach image link must be on a new line in the file" +
+           "\nClick Download from list button" +
+           "\nImages will be automatically downloaded if found\n" +
+           "After images are downloaded you can view them in the download directory";
+
+        public static string FromFolderHelpText = "Downloading image from folder:\n\nSelect a folder containing image files (.jpg, .png, .gif) from the opened explorer menu" +
+            "\nYou can choose to keep the original filenames (to replace them easier after download)" +
+            "\nand you can also choose to download images even if duplicate resolutions are found\n" +
+            "Images will be automatically downloaded if found\n" +
+            "After images are downloaded you can view them in the download directory";
     }
 }

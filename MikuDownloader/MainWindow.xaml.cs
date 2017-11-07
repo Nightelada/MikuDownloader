@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls.Primitives;
 
 namespace MikuDownloader
 {
@@ -56,9 +55,10 @@ namespace MikuDownloader
                         }
                         else
                         {
-                            status += String.Format("Failed to download image!\n");
+                            status += String.Format("Failed to download image!\n{0}\n", ex.Message);
                         }
-                        txtBlockData.Text = ex.Message;
+                        
+                        txtBlockData.Text = status;
                     }
                     finally
                     {
@@ -99,6 +99,8 @@ namespace MikuDownloader
                     {
                         var res = ImageHelper.GetResolution(filename);
                         bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
+                        bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
+
 
                         if (imageList.First().Resolution.Equals(res) && ignoreResolution != true)
                         {
@@ -106,7 +108,12 @@ namespace MikuDownloader
                         }
                         else
                         {
-                            ImageHelper.DownloadBestImage(imageList);
+                            string oldFilename = String.Empty;
+                            if(keepFilenames == true)
+                            {
+                                oldFilename = Path.GetFileNameWithoutExtension(filename);
+                            }
+                            ImageHelper.DownloadBestImage(imageList, oldFilename);
                             status += "Successfully downoaded image!\n";
                         }
                     }
@@ -114,8 +121,16 @@ namespace MikuDownloader
                 }
                 catch (Exception ex)
                 {
-                    status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, String.IsNullOrEmpty(ex.InnerException.Message) ? ex.InnerException.Message : string.Empty);
-                    txtBlockData.Text = ex.Message;
+                    if (ex.InnerException != null)
+                    {
+                        status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        status += String.Format("Failed to download image!\n{0}\n", ex.Message);
+                    }
+
+                    txtBlockData.Text = status;
                 }
                 finally
                 {
@@ -234,13 +249,8 @@ namespace MikuDownloader
             }
         }
 
-        private void MenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
 
         // TODO: Add kawaii icons for all buttons
-        // promeni error message - pri download from url (isntead of having me try th..)
         private void menuFromFile_Click(object sender, RoutedEventArgs e)
         {
             HelpWindow tempHelpWindow = new HelpWindow(Constants.FromFileHelpText);
@@ -249,17 +259,20 @@ namespace MikuDownloader
 
         private void menuFromURL_Click(object sender, RoutedEventArgs e)
         {
-
+            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromURLHelpText);
+            tempHelpWindow.Show();
         }
 
         private void menuFromList_Click(object sender, RoutedEventArgs e)
         {
-
+            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromListHelpText);
+            tempHelpWindow.Show();
         }
 
         private void menuFromFolder_Click(object sender, RoutedEventArgs e)
         {
-
+            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromFolderHelpText);
+            tempHelpWindow.Show();
         }
 
         private void menuClose_Click(object sender, RoutedEventArgs e)

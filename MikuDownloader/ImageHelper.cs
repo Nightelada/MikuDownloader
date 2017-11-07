@@ -1,9 +1,7 @@
 ﻿using HtmlAgilityPack;
 using Microsoft.Win32;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
@@ -112,6 +110,7 @@ namespace MikuDownloader
             return tempTuple;
         }
 
+        // MAIN FUNC
         // this function parses an HTML after reverse-searching from IQDB
         public static List<ImageDetails> ReverseImageSearch(HtmlDocument htmlDoc, string originalImage, out string status)
         {
@@ -486,14 +485,13 @@ namespace MikuDownloader
             SaveImage(folderPath, origImage, imageName);
         }
 
-
         // downloads best image from a set of sites provided
         public static void DownloadBestImage(List<ImageDetails> images, string fileName = "")
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd");
             var folderPath = Path.Combine(Constants.MainDownloadDirectory, currTime.ToString());
 
-            // somehow try to distinguish files with differences! 
+            // somehow try to distinguish files with differences! (edge tracing)
             if (images != null && images.Count > 0)
             {
                 bool sankakuFlag = false;
@@ -524,6 +522,8 @@ namespace MikuDownloader
                     eshuushuuFlag = true;
                 }
                 
+                // goes through all images in collection - the source is danbooru,sankaku or gelbooru - it downloads all available images, considering priority sites
+                // if the source is another one it just downloads the first in the list (if there are more than one)
                 foreach (ImageDetails image in images)
                 {
                     try
@@ -574,7 +574,8 @@ namespace MikuDownloader
                             // doesn't work
                             else if (image.MatchSource == MatchSource.TheAnimeGallery)
                             {
-                                SaveTheAnimeGalleryImage(folderPath, image.PostURL, imageName);
+                                //SaveTheAnimeGalleryImage(folderPath, image.PostURL, imageName);
+                                throw new ArgumentException(Constants.TheAnimeGalleryErrorMessage);
                             }
                             else
                             {
@@ -605,61 +606,15 @@ namespace MikuDownloader
             using (WebClient webClient = new WebClient())
             {
                 webClient.Headers.Add("user-agent", Constants.UserAgentHeader);
-                bool flag404 = false;
                 byte[] data = null;
 
                 try
                 {
-                    // download if jpg
                     data = webClient.DownloadData(imageURL);
                 }
                 catch (WebException we)
                 {
-                    flag404 = true;
-                }
-
-                if (flag404)
-                {
-                    flag404 = false;
-                    try
-                    {
-                        // download if png
-                        string temp = imageURL.Remove(imageURL.IndexOf(".jpg")) + ".png";
-                        webClient.Headers.Add("user-agent", Constants.UserAgentHeader);
-                        data = webClient.DownloadData(temp);
-                    }
-                    catch (WebException we)
-                    {
-                        flag404 = true;
-                    }
-                    try
-                    {
-                        if (flag404)
-                        {
-                            // donwload if gif
-                            string temp = imageURL.Remove(imageURL.IndexOf(".jpg")) + ".gif";
-                            webClient.Headers.Add("user-agent", Constants.UserAgentHeader);
-                            data = webClient.DownloadData(temp);
-                        }
-                    }
-                    catch (WebException we)
-                    {
-                        flag404 = true;
-                    }
-                    try
-                    {
-                        if (flag404)
-                        {
-                            // donwload if jpeg (fucking macintosh extensions man...)
-                            string temp = imageURL.Remove(imageURL.IndexOf(".jpg")) + ".jpeg";
-                            webClient.Headers.Add("user-agent", Constants.UserAgentHeader);
-                            data = webClient.DownloadData(temp);
-                        }
-                    }
-                    catch (WebException we)
-                    {
-                        throw new ArgumentException("Invalid image format! Must be png, jpg(jpeg) or gif!", we);
-                    }
+                    throw new Exception("Could not download image!" + we.Message);
                 }
 
                 using (MemoryStream mem = new MemoryStream(data))
@@ -686,7 +641,7 @@ namespace MikuDownloader
                         }
                         else
                         {
-                            throw new ArgumentException("Invalid image hash detected! Make sure the image downloaded is in format of png, jpg or gif!");
+                            throw new ArgumentException("Invalid image hash detected! Make sure the image to download is in format of png, jpg or gif!");
                         }
 
                         string imagePath = Path.Combine(directory, filename);
@@ -795,11 +750,11 @@ namespace MikuDownloader
                     {
                         if (ex.InnerException != null)
                         {
-                            status += String.Format("Failed to download image!\n{1}\n{2}\n", file, ex.Message, ex.InnerException.Message);
+                            status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
                         }
                         else
                         {
-                            status += String.Format("Failed to download image!\n{1}\n", file, ex.Message);
+                            status += String.Format("Failed to download image!\n{0}\n", ex.Message);
                         }
                         secondaryLog += "Something went wrong when downloading image!\n";
                     }
