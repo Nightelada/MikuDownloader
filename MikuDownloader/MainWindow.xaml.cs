@@ -279,5 +279,39 @@ namespace MikuDownloader
         {
             Close();
         }
+
+        // downloads sankaku recommendations
+        private async void btnDownloadRecommendations_Click(object sender, RoutedEventArgs e)
+        {
+            BlockAllButtons();
+
+            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
+
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                List<string> images = Directory.GetFiles(folderPath).ToList();
+
+                if (images != null && images.Count > 0)
+                {
+                    txtBlockData.Text = "Downloading images...";
+                    bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
+                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
+
+                    await ImageHelper.DownloadBulkRecommendationsFromFolder(images);
+
+                    txtBlockData.Text = "Finished downloading images! Check log for more info!";
+                }
+                else
+                {
+                    txtBlockData.Text = "No images found in text file!";
+                }
+            }
+            else
+            {
+                MessageBox.Show("No file selected!", "Error");
+            }
+
+            ReleaseAllButtons();
+        }
     }
 }

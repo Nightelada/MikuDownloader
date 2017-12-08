@@ -276,7 +276,7 @@ namespace MikuDownloader
             string origImage = string.Empty;
 
             var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='post-content']");
-
+            
             if (nodes != null)
             {
                 foreach (var node in nodes)
@@ -296,6 +296,149 @@ namespace MikuDownloader
             origImage = origImage.Replace("&amp;","&");
 
             SaveImage(folderPath, origImage, imageName);
+        }
+
+        // parses sankaku result to get recommendations links
+        private static void SaveSankakuRecommendations(string folderPath, string postURL)
+        {
+            HtmlWeb web = new HtmlWeb();
+
+            HtmlDocument htmlDoc = web.Load(postURL);
+
+            List<string> recommendationList = new List<string>();
+
+            // get all sankaku recommendation nodes
+            var recommendationNodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='recommended']/div[@id='recommendations']/span");
+
+            string logPath = Path.Combine(folderPath, Constants.RecommendationsLogFileName);
+
+            Directory.CreateDirectory(folderPath);
+
+
+            if (recommendationNodes != null)
+            {
+                // gets recommendation links
+                foreach (var node in recommendationNodes)
+                {
+                    string tempRecommendation = node.SelectSingleNode("a").GetAttributeValue("href", null);
+                    tempRecommendation = String.Format("https://chan.sankakucomplex.com{0}", tempRecommendation);
+                    recommendationList.Add(tempRecommendation);
+                }
+
+                //downloads recommendation links
+                foreach (string s in recommendationList)
+                {
+                    string imageName = s.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Last();
+
+                    SaveSankakuImage(folderPath, s, imageName);
+                }
+
+                recommendationList.Add("==================================================================================");
+                File.AppendAllLines(logPath, recommendationList);
+            }
+            else
+            {
+                recommendationList.Add("==================================================================================");
+                File.AppendAllLines(logPath, recommendationList);
+            }
+        }
+
+        // downloads best image from a set of sites provided
+        public static void DownloadRecommendations(List<ImageDetails> images)
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd");
+            var folderPath = Path.Combine(Constants.MainDownloadDirectory, currTime.ToString());
+
+            if (images != null && images.Count > 0)
+            {
+                foreach (ImageDetails image in images)
+                {
+                    try
+                    {
+                        if (image.MatchSource == MatchSource.SankakuChannel)
+                        {
+                            SaveSankakuRecommendations(folderPath, image.PostURL);
+                        }
+
+                        Thread.Sleep(1000);//anti-ban
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!ex.Message.Contains("Error when parsing sankaku recommendations! Post was deleted/removed!"))
+                        {
+                            throw new ArgumentException(ex.Message);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                throw new ArgumentException("No images found in collection! Pages were not parsed correctly! Download picture manually from links!\n");
+            }
+        }
+
+        // downloads bulk sankaku recommendations from a folder
+        public async static Task<string> DownloadBulkRecommendationsFromFolder(List<string> imagesToDownload)
+        {
+            string secondaryLog = String.Format("Begin checking of files for folder: {0}\n", Path.GetDirectoryName(imagesToDownload.First()));
+            string totalDownloadedImages = string.Empty;
+
+            foreach (string file in imagesToDownload)
+            {
+                string status = string.Empty;
+                secondaryLog += String.Format("Checking image for: {0}\n", Path.GetFileName(file));
+
+                if (IsImage(file))
+                {
+                    try
+                    {
+                        var responseTuple = await GetResponseFromFile(file);
+
+                        var imageList = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+
+                        if (imageList != null && imageList.Count > 0)
+                        {
+                            string fileResolution = GetResolution(file);
+                            string matchResolution = imageList.First().Resolution;
+
+
+                            DownloadRecommendations(imageList);
+                            status += "Successfully downoaded image!\n";
+                            totalDownloadedImages += Path.GetFileName(file) + "\n";
+
+                            Thread.Sleep(1000); //anti-ban
+                        }
+                        else
+                        {
+                            secondaryLog += "No matches were found for the image!\n";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.InnerException != null)
+                        {
+                            status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                        }
+                        else
+                        {
+                            status += String.Format("Failed to download image!\n{0}\n", ex.Message);
+                        }
+                        secondaryLog += "Something went wrong when downloading image!\n";
+                    }
+                    finally
+                    {
+                        File.AppendAllText(GetLogFileName(), GetLogTimestamp() + status);
+                    }
+                }
+                else
+                {
+                    secondaryLog += String.Format("File: {0} is not an image file and was not checked!\n", Path.GetFileName(file));
+                }
+                secondaryLog += Constants.VeryLongLine + "\n";
+            }
+            File.AppendAllText(GetSecondaryLogFileName(), "All downloaded images:\n" + totalDownloadedImages + Constants.VeryLongLine + "\n" + secondaryLog);
+
+            return "Successful";
         }
 
         // parses danbooru result to get best res link without searching many times

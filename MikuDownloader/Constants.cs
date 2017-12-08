@@ -38,6 +38,7 @@
         public static string MainDownloadDirectory = "MikuDownloaderImages";
         public static string MainLogFileName = "downloaded-images-log.txt";
         public static string SecondaryLogFileName = "folder-downloaded-images-log.txt";
+        public static string RecommendationsLogFileName = "recommendations-log.txt";
 
         public static string VeryLongLine = "------------------------------------------------------------------------------------";
 
