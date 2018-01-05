@@ -287,7 +287,7 @@ namespace MikuDownloader
                 {
                     string imageName = s.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Last();
 
-                    SaveSankakuImage(folderPath, s, imageName);
+                    //SaveSankakuImage(folderPath, s, imageName);
                 }
 
                 recommendationList.Add("==================================================================================");
@@ -494,13 +494,17 @@ namespace MikuDownloader
         {
             string origImage = string.Empty;
 
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='post-content']");
+            var deleted = htmlDoc.DocumentNode.SelectNodes(".//div[@class='status-notice deleted']");
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='stats']/ul/li");
 
-            if (nodes != null)
+            if (nodes != null && deleted == null)
             {
                 foreach (var node in nodes)
                 {
-                    origImage = node.SelectSingleNode("a/img").GetAttributeValue("src", null);
+                    if (node.InnerHtml.Contains("Original:"))
+                    {
+                        origImage = node.SelectSingleNode("a").GetAttributeValue("href", null);
+                    }
                 }
                 if (string.IsNullOrEmpty(origImage))
                 {
@@ -710,115 +714,84 @@ namespace MikuDownloader
         // downloads best image from a set of sites provided
         public static void DownloadBestImage(List<ImageDetails> images, string fileName = "")
         {
-            var currTime = DateTime.Now.ToString("yyyyMMdd");
-            var folderPath = Path.Combine(Constants.MainDownloadDirectory, currTime.ToString());
-
             // somehow try to distinguish files with differences! (edge tracing)
             if (images != null && images.Count > 0)
             {
-                bool sankakuFlag = false;
-                bool danbooruFlag = false;
-                bool gelbooruFlag = false;
-                bool yandereFlag = false;
-                bool eshuushuuFlag = false;
-
-
-                if (images.Exists(item => item.MatchSource == MatchSource.SankakuChannel))
-                {
-                    sankakuFlag = true;
-                }
-                if (images.Exists(item => item.MatchSource == MatchSource.Danbooru))
-                {
-                    danbooruFlag = true;
-                }
-                if (images.Exists(item => item.MatchSource == MatchSource.Gelbooru))
-                {
-                    gelbooruFlag = true;
-                }
-                if (images.Exists(item => item.MatchSource == MatchSource.Yandere))
-                {
-                    yandereFlag = true;
-                }
-                if (images.Exists(item => item.MatchSource == MatchSource.Eshuushuu))
-                {
-                    eshuushuuFlag = true;
-                }
-                if (images.Count == 1 && images.Exists(item => item.MatchSource == MatchSource.TheAnimeGallery))
-                {
-                    throw new ArgumentException(Constants.TheAnimeGalleryErrorMessage);
-                }
-
-                // goes through all images in collection - the source is danbooru,sankaku or gelbooru - it downloads all available images, considering priority sites
-                // if the source is another one it just downloads the first in the list (if there are more than one)
-                foreach (ImageDetails image in images)
-                {
-                    try
-                    {
-                        string imageName;
-                        if (String.IsNullOrEmpty(fileName))
-                        {
-                            imageName = string.Empty;
-                        }
-                        else
-                        {
-                            imageName = fileName;
-                        }
-
-                        if (image.MatchSource == MatchSource.Danbooru)
-                        {
-                            SaveDanbooruImage(folderPath, image.PostURL, imageName);
-                        }
-                        else if (image.MatchSource == MatchSource.SankakuChannel && !danbooruFlag)
-                        {
-                            SaveSankakuImage(folderPath, image.PostURL, imageName);
-                        }
-                        else if (image.MatchSource == MatchSource.Gelbooru && !sankakuFlag && !danbooruFlag)
-                        {
-                            SaveGelbooruImage(folderPath, image.PostURL, imageName);
-                        }
-                        else if (image.MatchSource == MatchSource.Yandere && !gelbooruFlag && !danbooruFlag && !sankakuFlag)
-                        {
-                            SaveYandereImage(folderPath, image.PostURL, imageName);
-                            break;
-                        }
-                        else if (image.MatchSource == MatchSource.Eshuushuu && !yandereFlag && !gelbooruFlag && !danbooruFlag && !sankakuFlag)
-                        {
-                            SaveEshuushuuImage(folderPath, image.PostURL, imageName);
-                            break;
-                        }
-                        else if (!eshuushuuFlag && !yandereFlag && !gelbooruFlag && !danbooruFlag && !sankakuFlag)
-                        {
-                            if (image.MatchSource == MatchSource.Konachan)
-                            {
-                                SaveKonachanImage(folderPath, image.PostURL, imageName);
-                                break;
-                            }
-                            else if (image.MatchSource == MatchSource.Zerochan)
-                            {
-                                SaveZerochanImage(folderPath, image.PostURL, imageName);
-                                break;
-                            }
-                            else if (image.MatchSource == MatchSource.AnimePictures)
-                            {
-                                SaveAnimePicturesImage(folderPath, image.PostURL, imageName);
-                                break;
-                            }
-                            else if (image.MatchSource != MatchSource.TheAnimeGallery)
-                            {
-                                throw new ArgumentException("Uknown parse source site!\n");
-                            }
-                        }
-                        Thread.Sleep(1000);//anti-ban
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new ArgumentException(ex.Message);
-                    }
-                }
+                SavePriorityImages(images, fileName);
             }
             else
             {
                 throw new ArgumentException("No images were found in selected sites! Download picture manually from links!\n");
+            }
+        }
+
+        private static void SavePriorityImages(List<ImageDetails> images, string fileName)
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd");
+            var folderPath = Path.Combine(Constants.MainDownloadDirectory, currTime.ToString());
+
+            bool flagSuccessfullDownload = false;
+            int oldPriority = 1;
+            bool status = false;
+
+            images.Sort((x, y) => x.Priority.CompareTo(y.Priority));
+
+            if (images.Count == 1 && images[0].MatchSource == MatchSource.TheAnimeGallery)
+            {
+                throw new ArgumentException(Constants.TheAnimeGalleryErrorMessage);
+            }
+
+            foreach (ImageDetails image in images)
+            {
+                string imageUrl = string.Empty;
+                try
+                {
+                    if (image.Priority > oldPriority)
+                    {
+                        if (!flagSuccessfullDownload)
+                        {
+                            oldPriority = image.Priority;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    if (oldPriority == image.Priority)
+                    {
+                        if (image.Priority <= 3)
+                        {
+                            imageUrl = GetImageURL(image.PostURL, image.MatchSource, out status);
+                            if (status)
+                            {
+                                flagSuccessfullDownload = true;
+                            }
+                        }
+                        else
+                        {
+                            if (!flagSuccessfullDownload)
+                            {
+                                imageUrl = GetImageURL(image.PostURL, image.MatchSource, out status);
+                                if (status)
+                                {
+                                    flagSuccessfullDownload = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(imageUrl) && status)
+                    {
+                        SaveImage(folderPath, imageUrl, fileName);
+                    }
+                    // anti-ban
+                    Thread.Sleep(1000);
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException(ex.Message);
+                }
             }
         }
         
@@ -1210,13 +1183,14 @@ namespace MikuDownloader
             return resolution;
         }
 
+        // extracts image name from url for saving on disk
         private static string GetImageNameFromURL(string directory, string URL)
         {
             string name = string.Empty;
 
             string currFolder = AppDomain.CurrentDomain.BaseDirectory;
 
-            int allowedSymbols = Constants.Win32MaxPath - directory.Length - currFolder.Length - 3;
+            int allowedSymbols = Constants.Win32MaxPath - directory.Length - currFolder.Length - 4;
             
             string[] tempStringArray = URL.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             name = tempStringArray.Last();

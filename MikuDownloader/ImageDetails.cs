@@ -17,6 +17,7 @@ namespace MikuDownloader
         public MatchType MatchType { get; set; }
         public MatchRating MatchRating { get; set; }
         public string ImageSource { get; set; }
+        public int Priority { get; set; }
 
         public ImageDetails(string post, string tag, string res, string sim, string mType)
         {
@@ -113,41 +114,50 @@ namespace MikuDownloader
 
         private void SetMatchSource(string imageSource)
         {
-             if (imageSource.Contains("sankaku"))
-            {
-                MatchSource = MatchSource.SankakuChannel;
-            }
-            else if (imageSource.Contains("danbooru"))
+            if (imageSource.Contains("danbooru"))
             {
                 MatchSource = MatchSource.Danbooru;
+                Priority = 1;
+            }
+            else if (imageSource.Contains("sankaku"))
+            {
+                MatchSource = MatchSource.SankakuChannel;
+                Priority = 2;
             }
             else if (imageSource.Contains("gelbooru"))
             {
                 MatchSource = MatchSource.Gelbooru;
+                Priority = 3;
             }
             else if (imageSource.Contains("yande.re"))
             {
                 MatchSource = MatchSource.Yandere;
+                Priority = 4;
             }
             else if (imageSource.Contains("konachan"))
             {
                 MatchSource = MatchSource.Konachan;
-            }
-            else if (imageSource.Contains("anime-pictures"))
-            {
-                MatchSource = MatchSource.AnimePictures;
+                Priority = 5;
             }
             else if (imageSource.Contains("zerochan"))
             {
                 MatchSource = MatchSource.Zerochan;
-            }
-            else if (imageSource.Contains("theanimegallery"))
-            {
-                MatchSource = MatchSource.TheAnimeGallery;
+                Priority = 6;
             }
             else if (imageSource.Contains("e-shuushuu"))
             {
                 MatchSource = MatchSource.Eshuushuu;
+                Priority = 7;
+            }
+            else if (imageSource.Contains("anime-pictures"))
+            {
+                MatchSource = MatchSource.AnimePictures;
+                Priority = 8;
+            }
+            else if (imageSource.Contains("theanimegallery"))
+            {
+                MatchSource = MatchSource.TheAnimeGallery;
+                Priority = 9;
             }
         }
         
