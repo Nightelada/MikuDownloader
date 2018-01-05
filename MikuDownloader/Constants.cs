@@ -2,6 +2,8 @@
 {
     public static class Constants
     {
+        public static int Win32MaxPath = 250;
+
         // imgur data
         public static string UploadImageEndpoint = "https://api.imgur.com/3/image";
         public static string AuthorizationHeader = "Bearer 70d0f77b441d2352620cfe6af9251048d7e67b61";
@@ -24,7 +26,7 @@
         public static string TinEyeMain = "http://tineye.com/";
         public static string GoogleMain = "https://images.google.com/";
 
-        public static string FacebookTempURL = "scontent.fsof3-1.fna.fbcdn.net";
+        public static string FacebookTempURL = "fbcdn.net"; //scontent.fsof3-1.fna.fbcdn.net
 
         public static string SankakuStart = "cs.sankakucomplex.com/data";
         public static string DanbooruStart = "danbooru.donmai.us/cached/data";

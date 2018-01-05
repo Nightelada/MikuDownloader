@@ -191,7 +191,6 @@ namespace MikuDownloader
                     if (match.OuterHtml.Contains("match"))
                     {
                         var postId = match.SelectSingleNode("tr/td[@class='image']/a").GetAttributeValue("href", null);
-                        var imageLink = match.SelectSingleNode("tr/td[@class='image']/a/img").GetAttributeValue("src", null);
 
                         var tags = match.SelectSingleNode("tr/td[@class='image']/a/img").GetAttributeValue("alt", null);
                         var resolution = match.SelectSingleNode("(tr/td)[3]").InnerText;
@@ -199,24 +198,15 @@ namespace MikuDownloader
                         var similarity = match.SelectSingleNode("(tr/td)[4]").InnerText;
                         var matchType = match.SelectSingleNode("(tr/th)[1]").InnerText;
 
-                        if (imageLink != null && postId != null && tags != null && resolution != null)
+                        if (postId != null && tags != null && resolution != null)
                         {
-                            ImageDetails tempImg = new ImageDetails(postId, imageLink, tags, resolution, similarity, matchType);
+                            ImageDetails tempImg = new ImageDetails(postId, tags, resolution, similarity, matchType);
                             tempImg.OriginalURL = originalImage;
                             imagesList.Add(tempImg);
-
-                            if (!tempImg.Source.Equals("Unavailable"))
+                            
+                            if (!resolutions.Contains(tempImg.Resolution))
                             {
-                                if (!resolutions.Contains(tempImg.Resolution))
-                                {
-                                    resolutions.Add(tempImg.Resolution);
-                                }
-                            }
-                            else
-                            {
-                                response += "Image search failed! The matches found could not be parsed!\n";
-                                status = response;
-                                return null;
+                                resolutions.Add(tempImg.Resolution);
                             }
                         }
                     }
@@ -234,7 +224,7 @@ namespace MikuDownloader
                             if (image.Resolution.Equals(bestResoltuion))
                             {
                                 bestImages.Add(image);
-                                response += String.Format("{0}: {1} Similarity: {2}\n", image.MatchType.ToString(), image.PostURL, image.Similarity);
+                                response += String.Format("{0}: {1} Similarity: {2} Rating: {3}\n", image.MatchType.ToString(), image.PostURL, image.Similarity, image.MatchRating.ToString());
                             }
                             if (image.Resolution.Equals("Unavailable"))
                             {
@@ -257,7 +247,6 @@ namespace MikuDownloader
             else
             {
                 response += "Failed to parse documents after finding matches!\n";
-
                 status = response;
                 return null;
             }
@@ -265,39 +254,7 @@ namespace MikuDownloader
             status = response;
             return bestImages;
         }
-
-        // parses sankaku result to get best res link without searching many times
-        private static void SaveSankakuImage(string folderPath, string postURL, string imageName)
-        {
-            HtmlWeb web = new HtmlWeb();
-
-            HtmlDocument htmlDoc = web.Load(postURL);
-
-            string origImage = string.Empty;
-
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='post-content']");
-            
-            if (nodes != null)
-            {
-                foreach (var node in nodes)
-                {
-                    origImage = node.SelectSingleNode("a/img").GetAttributeValue("src", null);
-                }
-                if (string.IsNullOrEmpty(origImage))
-                {
-                    throw new ArgumentException("Failed to parse sankaku image!");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Error when parsing sankaku image! Post was deleted/removed!");
-            }
-            origImage = String.Format("https:{0}", origImage);
-            origImage = origImage.Replace("&amp;","&");
-
-            SaveImage(folderPath, origImage, imageName);
-        }
-
+        
         // parses sankaku result to get recommendations links
         private static void SaveSankakuRecommendations(string folderPath, string postURL)
         {
@@ -364,10 +321,7 @@ namespace MikuDownloader
                     }
                     catch (Exception ex)
                     {
-                        if (!ex.Message.Contains("Error when parsing sankaku recommendations! Post was deleted/removed!"))
-                        {
-                            throw new ArgumentException(ex.Message);
-                        }
+                        throw new ArgumentException(ex.Message);
                     }
                 }
             }
@@ -441,68 +395,161 @@ namespace MikuDownloader
             return "Successful";
         }
 
-        // parses danbooru result to get best res link without searching many times
-        private static void SaveDanbooruImage(string folderPath, string postURL, string imageName)
+        // parses the post to find the url of the image
+        private static string GetImageURL(string postURL, MatchSource source, out bool status)
         {
-            HtmlWeb web = new HtmlWeb();
-
-            HtmlDocument htmlDoc = web.Load(postURL);
-
-            string origImage = string.Empty;
-
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//section[@id='post-information']/ul/li");
-
-            foreach (var node in nodes)
+            try
             {
-                if (node.InnerHtml.Contains("Size"))
+                HtmlWeb web = new HtmlWeb();
+
+                HtmlDocument htmlDoc = web.Load(postURL);
+
+                string imageUrl = string.Empty;
+
+                status = true;
+
+                switch (source)
                 {
-                    origImage = node.SelectSingleNode("a").GetAttributeValue("href", null);
-                    break;
+                    case MatchSource.Danbooru:
+                        imageUrl = SaveDanbooruImage(htmlDoc);
+                        break;
+                    case MatchSource.SankakuChannel:
+                        imageUrl = SaveSankakuImage(htmlDoc);
+                        break;
+                    case MatchSource.Gelbooru:
+                        imageUrl = SaveGelbooruImage(htmlDoc);
+                        break;
+                    case MatchSource.Yandere:
+                        imageUrl = SaveYandereImage(htmlDoc);
+                        break;
+                    case MatchSource.Konachan:
+                        imageUrl = SaveKonachanImage(htmlDoc);
+                        break;
+                    case MatchSource.Zerochan:
+                        imageUrl = SaveZerochanImage(htmlDoc);
+                        break;
+                    case MatchSource.Eshuushuu:
+                        imageUrl = SaveEshuushuuImage(htmlDoc);
+                        break;
+                    case MatchSource.AnimePictures:
+                        imageUrl = SaveAnimePicturesImage(htmlDoc);
+                        break;
+                    case MatchSource.TheAnimeGallery: // TODO: save session cookie before trying to download
+                        imageUrl = SaveTheAnimeGalleryImage(htmlDoc);
+                        break;
+                    default:
+                        status = false;
+                        imageUrl = "Unavailable";
+                        break;
                 }
+                return imageUrl;
             }
-            if (string.IsNullOrEmpty(origImage))
+            catch (Exception ex)
             {
-                throw new ArgumentException("Failed to parse Danbooru image!");
+                status = false;
+                return ex.Message;
             }
-            origImage = String.Format("https://danbooru.donmai.us{0}", origImage);
-
-            SaveImage(folderPath, origImage, imageName);
         }
 
         // parses danbooru result to get best res link without searching many times
-        private static void SaveGelbooruImage(string folderPath, string postURL, string imageName)
+        private static string SaveDanbooruImage(HtmlDocument htmlDoc)
         {
-            HtmlWeb web = new HtmlWeb();
+            string origImage = string.Empty;
 
-            HtmlDocument htmlDoc = web.Load(postURL);
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//section[@id='post-information']/ul/li");
+            if (nodes != null)
+            {
+                foreach (var node in nodes)
+                {
+                    if (node.InnerHtml.Contains("Size"))
+                    {
+                        try
+                        {
+                            origImage = node.SelectSingleNode("a").GetAttributeValue("href", null);
+                            break;
+                        }
+                        catch(Exception ex)
+                        {
+                            throw new ArgumentException("Error when parsing danbooru url! Image was probably deleted or removed!\n");
+                        }
+                    }
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse danbooru url!");
+                }
+            }
+            else
+            {
+                throw new ArgumentException("Error when parsing danbooru url! Image was probably deleted or removed!");
+            }
 
+            origImage = String.Format("https://danbooru.donmai.us{0}", origImage);
+
+            return origImage;
+        }
+
+        // parses sankaku result to get best res link without searching many times
+        private static string SaveSankakuImage(HtmlDocument htmlDoc)
+        {
+            string origImage = string.Empty;
+
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='post-content']");
+
+            if (nodes != null)
+            {
+                foreach (var node in nodes)
+                {
+                    origImage = node.SelectSingleNode("a/img").GetAttributeValue("src", null);
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse sankaku url!");
+                }
+            }
+            else
+            {
+                throw new ArgumentException("Error when parsing sankaku url! Post was deleted/removed!");
+            }
+            origImage = String.Format("https:{0}", origImage);
+            origImage = origImage.Replace("&amp;", "&");
+
+            return origImage;
+        }
+
+        // parses danbooru result to get best res link without searching many times
+        private static string SaveGelbooruImage(HtmlDocument htmlDoc)
+        {
             string origImage = string.Empty;
 
             var nodes = htmlDoc.DocumentNode.SelectNodes(".//div/li/a");
 
-            foreach (var node in nodes)
+            if (nodes != null)
             {
-                if (node.InnerHtml.Equals("Original image"))
+                foreach (var node in nodes)
                 {
-                    origImage = node.GetAttributeValue("href", null);
-                    break;
+                    if (node.InnerHtml.Equals("Original image"))
+                    {
+                        origImage = node.GetAttributeValue("href", null);
+                        break;
+                    }
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse gelbooru url!");
                 }
             }
-            if (string.IsNullOrEmpty(origImage))
+            else
             {
-                throw new ArgumentException("Failed to parse Gelbooru image!");
+                throw new ArgumentException("Error when parsing gelbooru url! Post was deleted/removed!");
             }
 
-            SaveImage(folderPath, origImage, imageName);
+            return origImage;
         }
 
         // parses yande.re result to get best res link without searching many times
-        private static void SaveYandereImage(string folderPath, string postURL, string imageName)
+        private static string SaveYandereImage(HtmlDocument htmlDoc)
         {
-            HtmlWeb web = new HtmlWeb();
-
-            HtmlDocument htmlDoc = web.Load(postURL);
-
             string origImage = string.Empty;
 
             var nodes = htmlDoc.DocumentNode.SelectNodes(".//div/ul/li/a[@class='original-file-unchanged' or @class='original-file-changed']");
@@ -515,119 +562,151 @@ namespace MikuDownloader
                 }
                 if (string.IsNullOrEmpty(origImage))
                 {
-                    throw new ArgumentException("Failed to parse yande.re image!");
+                    throw new ArgumentException("Failed to parse yande.re url!");
                 }
             }
             else
             {
-                throw new ArgumentException("Error when parsing yande.re image! Image was probably deleted");
+                throw new ArgumentException("Error when parsing yande.re url! Image was probably deleted");
             }
 
-            SaveImage(folderPath, origImage, imageName);
+            return origImage;
         }
 
-        // parses zerochan result to get best res link without searching many times
-        private static void SaveZerochanImage(string folderPath, string postURL, string imageName)
+        // parses yande.re result to get best res link without searching many times
+        private static string SaveKonachanImage(HtmlDocument htmlDoc)
         {
-            HtmlWeb web = new HtmlWeb();
-
-            HtmlDocument htmlDoc = web.Load(postURL);
-
             string origImage = string.Empty;
 
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='content']/div/img");
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div/ul/li/a[@class='original-file-unchanged' or @class='original-file-changed']");
 
             if (nodes != null)
             {
                 foreach (var node in nodes)
                 {
-                    origImage = node.GetAttributeValue("src", null);
+                    origImage = node.GetAttributeValue("href", null);
                 }
                 if (string.IsNullOrEmpty(origImage))
                 {
-                    throw new ArgumentException("Failed to parse zerochan image!");
+                    throw new ArgumentException("Failed to parse konachan url!");
                 }
             }
             else
             {
-                throw new ArgumentException("Error when parsing zerochan image! Image was probably deleted");
+                throw new ArgumentException("Error when parsing konachan url! Image was probably deleted");
             }
 
-            SaveImage(folderPath, origImage, imageName);
+            return origImage;
+        }
+
+        // parses zerochan result to get best res link without searching many times
+        private static string SaveZerochanImage(HtmlDocument htmlDoc)
+        {
+            string origImage = string.Empty;
+
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='content']/div/a");
+
+            if (nodes != null)
+            {
+                foreach (var node in nodes)
+                {
+                    origImage = node.GetAttributeValue("href", null);
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse zerochan url!");
+                }
+            }
+            else
+            {
+                throw new ArgumentException("Error when parsing zerochan url! Image was probably deleted");
+            }
+
+            return origImage;
         }
 
         // parses e-shuushuu result to get best res link without searching many times
-        private static void SaveEshuushuuImage(string folderPath, string postURL, string imageName)
+        private static string SaveEshuushuuImage(HtmlDocument htmlDoc)
         {
-            HtmlWeb web = new HtmlWeb();
-
-            HtmlDocument htmlDoc = web.Load(postURL);
-
             string origImage = string.Empty;
 
             var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@class='thumb']/a[@class='thumb_image']");
 
-            foreach (var node in nodes)
+            if (nodes != null)
             {
-                origImage = node.GetAttributeValue("href", null);
+                foreach (var node in nodes)
+                {
+                    origImage = node.GetAttributeValue("href", null);
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse e-shuushuu url!");
+                }
             }
-            if (string.IsNullOrEmpty(origImage))
+            else
             {
-                throw new ArgumentException("Failed to parse E-shuushuu image!");
+                throw new ArgumentException("Error when parsing e-shuushuu url! Post was deleted/removed!");
             }
             origImage = String.Format("http://e-shuushuu.net/{0}", origImage);
 
-            SaveImage(folderPath, origImage, imageName);
+            return origImage;
         }
 
         // parses Anime-Pictures result to get best res link without searching many times
-        private static void SaveAnimePicturesImage(string folderPath, string postURL, string imageName)
+        private static string SaveAnimePicturesImage(HtmlDocument htmlDoc)
         {
-            HtmlWeb web = new HtmlWeb();
-
-            HtmlDocument htmlDoc = web.Load(postURL);
-
             string origImage = string.Empty;
 
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='content']/div/div[@id='big_preview_cont']/a");
+            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='big_preview_cont']/a");
 
-            foreach (var node in nodes)
+            if (nodes != null)
             {
-                origImage = node.GetAttributeValue("href", null);
+                foreach (var node in nodes)
+                {
+                    origImage = node.GetAttributeValue("href", null);
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse anime-pictures image!");
+                }
             }
-            if (string.IsNullOrEmpty(origImage))
+            else
             {
-                throw new ArgumentException("Failed to parse Anime-Pictures image!");
+                throw new ArgumentException("Error when parsing anime-pictures url! Post was deleted/removed!");
             }
             origImage = String.Format("https://anime-pictures.net{0}", origImage);
 
-            SaveImage(folderPath, origImage, imageName);
+            return origImage;
         }
 
         // parses The Anime Gallery result to get best res link without searching many times
-        private static void SaveTheAnimeGalleryImage(string folderPath, string postURL, string imageName)
+        private static string SaveTheAnimeGalleryImage(HtmlDocument htmlDoc)
         {
-            HtmlWeb web = new HtmlWeb();
-
-            HtmlDocument htmlDoc = web.Load(postURL);
-
             string origImage = string.Empty;
 
             var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@class='download']/a");
 
-            foreach (var node in nodes)
+            if (nodes != null)
             {
-                origImage = node.GetAttributeValue("href", null);
+                foreach (var node in nodes)
+                {
+                    origImage = node.GetAttributeValue("href", null);
+                }
+                if (string.IsNullOrEmpty(origImage))
+                {
+                    throw new ArgumentException("Failed to parse the anime gallery url!");
+                }
             }
-            if (string.IsNullOrEmpty(origImage))
+            else
             {
-                throw new ArgumentException("Failed to parse The Anime Gallery image!");
+                throw new ArgumentException("Error when parsing the anime gallery url! Post was deleted/removed!");
+
             }
             origImage = String.Format("www.theanimegallery.com{0}", origImage);
 
-            SaveImage(folderPath, origImage, imageName);
+            return origImage;
         }
-
+        
         // downloads best image from a set of sites provided
         public static void DownloadBestImage(List<ImageDetails> images, string fileName = "")
         {
@@ -664,7 +743,11 @@ namespace MikuDownloader
                 {
                     eshuushuuFlag = true;
                 }
-                
+                if (images.Count == 1 && images.Exists(item => item.MatchSource == MatchSource.TheAnimeGallery))
+                {
+                    throw new ArgumentException(Constants.TheAnimeGalleryErrorMessage);
+                }
+
                 // goes through all images in collection - the source is danbooru,sankaku or gelbooru - it downloads all available images, considering priority sites
                 // if the source is another one it just downloads the first in the list (if there are more than one)
                 foreach (ImageDetails image in images)
@@ -674,7 +757,7 @@ namespace MikuDownloader
                         string imageName;
                         if (String.IsNullOrEmpty(fileName))
                         {
-                            imageName = image.ImageName;
+                            imageName = string.Empty;
                         }
                         else
                         {
@@ -705,47 +788,49 @@ namespace MikuDownloader
                         }
                         else if (!eshuushuuFlag && !yandereFlag && !gelbooruFlag && !danbooruFlag && !sankakuFlag)
                         {
-                            if (image.MatchSource == MatchSource.Zerochan)
+                            if (image.MatchSource == MatchSource.Konachan)
+                            {
+                                SaveKonachanImage(folderPath, image.PostURL, imageName);
+                                break;
+                            }
+                            else if (image.MatchSource == MatchSource.Zerochan)
                             {
                                 SaveZerochanImage(folderPath, image.PostURL, imageName);
+                                break;
                             }
-                            //probbaly works
                             else if (image.MatchSource == MatchSource.AnimePictures)
                             {
                                 SaveAnimePicturesImage(folderPath, image.PostURL, imageName);
+                                break;
                             }
-                            // doesn't work
-                            else if (image.MatchSource == MatchSource.TheAnimeGallery)
-                            {
-                                //SaveTheAnimeGalleryImage(folderPath, image.PostURL, imageName);
-                                throw new ArgumentException(Constants.TheAnimeGalleryErrorMessage);
-                            }
-                            else
+                            else if (image.MatchSource != MatchSource.TheAnimeGallery)
                             {
                                 throw new ArgumentException("Uknown parse source site!\n");
                             }
-                            break;
                         }
                         Thread.Sleep(1000);//anti-ban
                     }
                     catch (Exception ex)
                     {
-                        if (!ex.Message.Contains("Error when parsing sankaku image! Post was deleted/removed!"))
-                        {
-                            throw new ArgumentException(ex.Message);
-                        }
+                        throw new ArgumentException(ex.Message);
                     }
                 }
             }
             else
             {
-                throw new ArgumentException("No images found in collection! Pages were not parsed correctly! Download picture manually from links!\n");
+                throw new ArgumentException("No images were found in selected sites! Download picture manually from links!\n");
             }
         }
         
         // saves the image from the given url, to the selected path, with the given filename (extension is generated dynamically)
         public static string SaveImage(string directory, string imageURL, string imageName)
         {
+            if (string.IsNullOrEmpty(imageName))
+            {
+                imageName = GetImageNameFromURL(directory, imageURL);
+                imageName = imageName.Replace("%20", " ");
+            }
+
             using (WebClient webClient = new WebClient())
             {
                 webClient.Headers.Add("user-agent", Constants.UserAgentHeader);
@@ -1123,6 +1208,44 @@ namespace MikuDownloader
                 resolution = String.Format("{0}{1}{2}", width, '×', height);
             }
             return resolution;
+        }
+
+        private static string GetImageNameFromURL(string directory, string URL)
+        {
+            string name = string.Empty;
+
+            string currFolder = AppDomain.CurrentDomain.BaseDirectory;
+
+            int allowedSymbols = Constants.Win32MaxPath - directory.Length - currFolder.Length - 3;
+            
+            string[] tempStringArray = URL.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            name = tempStringArray.Last();
+
+            if (name.Contains(".jpg"))
+            {
+                name = name.Remove(name.IndexOf(".jpg"));
+            }
+            else if (name.Contains(".png"))
+            {
+                name = name.Remove(name.IndexOf(".png"));
+            }
+            else if (name.Contains(".gif"))
+            {
+                name = name.Remove(name.IndexOf(".gif"));
+            }
+            else if (name.Contains(".jpeg"))
+            {
+                name = name.Remove(name.IndexOf(".jpeg"));
+            }
+
+            if (name.Length > allowedSymbols)
+            {
+                return name.Substring(0, allowedSymbols);
+            }
+            else
+            {
+                return name;
+            }
         }
     }
 }
