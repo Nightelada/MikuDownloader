@@ -16,7 +16,6 @@ namespace MikuDownloader
         public MatchSource MatchSource { get; set; }
         public MatchType MatchType { get; set; }
         public MatchRating MatchRating { get; set; }
-        public string ImageSource { get; set; }
         public int Priority { get; set; }
 
         public ImageDetails(string post, string tag, string res, string sim, string mType)

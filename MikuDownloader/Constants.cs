@@ -28,19 +28,16 @@
 
         public static string FacebookTempURL = "fbcdn.net"; //scontent.fsof3-1.fna.fbcdn.net
 
-        public static string SankakuStart = "cs.sankakucomplex.com/data";
-        public static string DanbooruStart = "danbooru.donmai.us/cached/data";
-        public static string GelbooruStart = "gelbooru.com/images";
-        public static string YandereStart = "files.yande.re/image";
-        public static string KonachanStart = "konachan.com/image";
-        public static string AnimePicturesStart = "anime-pictures.net/pictures/get_image";
-        public static string EshuushuuStart = "http://e-shuushuu.net/";
         public static string TheAnimeGalleryErrorMessage = "The Anime Gallery images must be downloaded manually! Check links above!";
 
         public static string MainDownloadDirectory = "MikuDownloaderImages";
         public static string MainLogFileName = "downloaded-images-log.txt";
         public static string SecondaryLogFileName = "folder-downloaded-images-log.txt";
         public static string RecommendationsLogFileName = "recommendations-log.txt";
+        public static string DuplicatesLogFileName = "duplicates-log.txt";
+        public static string DuplicatesDirectory = "duplicates";
+        public static string BadDuplicatesDirectory = "bad-duplicates";
+
 
         public static string VeryLongLine = "------------------------------------------------------------------------------------";
 

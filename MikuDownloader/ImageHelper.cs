@@ -203,7 +203,7 @@ namespace MikuDownloader
                             ImageDetails tempImg = new ImageDetails(postId, tags, resolution, similarity, matchType);
                             tempImg.OriginalURL = originalImage;
                             imagesList.Add(tempImg);
-                            
+
                             if (!resolutions.Contains(tempImg.Resolution))
                             {
                                 resolutions.Add(tempImg.Resolution);
@@ -254,7 +254,7 @@ namespace MikuDownloader
             status = response;
             return bestImages;
         }
-        
+
         // parses sankaku result to get recommendations links
         private static void SaveSankakuRecommendations(string folderPath, string postURL)
         {
@@ -468,7 +468,7 @@ namespace MikuDownloader
                             origImage = node.SelectSingleNode("a").GetAttributeValue("href", null);
                             break;
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             throw new ArgumentException("Error when parsing danbooru url! Image was probably deleted or removed!\n");
                         }
@@ -710,7 +710,7 @@ namespace MikuDownloader
 
             return origImage;
         }
-        
+
         // downloads best image from a set of sites provided
         public static void DownloadBestImage(List<ImageDetails> images, string fileName = "")
         {
@@ -725,6 +725,7 @@ namespace MikuDownloader
             }
         }
 
+        // save parsed images based on site priority
         private static void SavePriorityImages(List<ImageDetails> images, string fileName)
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd");
@@ -794,7 +795,7 @@ namespace MikuDownloader
                 }
             }
         }
-        
+
         // saves the image from the given url, to the selected path, with the given filename (extension is generated dynamically)
         public static string SaveImage(string directory, string imageURL, string imageName)
         {
@@ -857,7 +858,7 @@ namespace MikuDownloader
             }
         }
 
-        // reads links from file, uploads them to imgur, and downloads files 1 by 1
+        // reads links from file and downloads files 1 by 1
         public async static Task<string> DownloadBulkImages(List<string> URLsToDownload)
         {
             foreach (string imageURL in URLsToDownload)
@@ -895,7 +896,7 @@ namespace MikuDownloader
             return "Successfull!";
         }
 
-        // reads links from file, uploads them to imgur, and downloads files 1 by 1
+        // reads image links from folder and downloads files 1 by 1
         public async static Task<string> DownloadBulkImagesFromFolder(List<string> imagesToDownload, bool? keepFilenames = true, bool? ignoreResolution = false)
         {
             string secondaryLog = String.Format("Begin checking of files for folder: {0}\n", Path.GetDirectoryName(imagesToDownload.First()));
@@ -995,7 +996,14 @@ namespace MikuDownloader
             var currTime = DateTime.Now.ToString("yyyyMMdd");
             return currTime + "_" + Constants.SecondaryLogFileName;
         }
-       
+
+        // -||-
+        public static string GetDuplicatesLogFileName()
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            return currTime + "_" + Constants.DuplicatesLogFileName;
+        }
+
         // browses for .txt file and returns full path
         public static string BrowseFile(string filter)
         {
@@ -1136,7 +1144,8 @@ namespace MikuDownloader
         // checks if the file is image
         private static bool IsImage(string filename)
         {
-            if (filename.Contains(".txt") || filename.Contains(".mp3") || filename.Contains(".avi") || filename.Contains(".mp4") || filename.Contains(".mkv"))
+            if (filename.EndsWith(".txt") || filename.EndsWith(".mp3") || filename.EndsWith(".avi") 
+                || filename.EndsWith(".mp4") || filename.EndsWith(".mkv") || filename.EndsWith(".webm"))
             {
                 return false;
             }
@@ -1168,7 +1177,7 @@ namespace MikuDownloader
             return false;
         }
 
-        // return the resolution of an image file from PC
+        // return the resolution of an image from the file system
         public static string GetResolution(string filename)
         {
             string resolution = string.Empty;
@@ -1191,7 +1200,7 @@ namespace MikuDownloader
             string currFolder = AppDomain.CurrentDomain.BaseDirectory;
 
             int allowedSymbols = Constants.Win32MaxPath - directory.Length - currFolder.Length - 4;
-            
+
             string[] tempStringArray = URL.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             name = tempStringArray.Last();
 
@@ -1220,6 +1229,78 @@ namespace MikuDownloader
             {
                 return name;
             }
+        }
+
+        // reads image links from folder and check for duplicates
+        public async static Task<Dictionary<Tuple<string, string>, List<string>>> CheckDuplicateImages(List<string> imagesToCheck)
+        {
+            List<Tuple<string, string, string>> bestMatchesList = new List<Tuple<string, string, string>>();
+
+            foreach (string file in imagesToCheck)
+            {
+                string status = string.Empty;
+
+                if (IsImage(file))
+                {
+                    try
+                    {
+                        var responseTuple = await GetResponseFromFile(file);
+
+                        var imageList = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+
+                        if (imageList != null && imageList.Count > 0)
+                        {
+                            string origImageName = Path.GetFileName(file);
+
+                            var bestMatch = imageList.SingleOrDefault(x => x.MatchType.Equals(MatchType.BestMatch)).PostURL;
+                            var resolution = imageList[0].Resolution;
+
+                            if (bestMatch != null)
+                            {
+                                bestMatchesList.Add(new Tuple<string, string, string>(bestMatch, origImageName, resolution));
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                }
+            }
+
+            var duplicatedPictures =
+                from p in bestMatchesList
+                group p by p.Item1 into g
+                where g.Count() > 1
+                select g.Key;
+
+            var duplicated = bestMatchesList.FindAll(p => duplicatedPictures.Contains(p.Item1));
+
+            Dictionary<Tuple<string, string>, List<string>> finalDuplicates = new Dictionary<Tuple<string, string>, List<string>>();
+
+            foreach (string duplicatePostURL in duplicatedPictures)
+            {
+                List<string> tmpList = new List<string>();
+
+                string res = string.Empty;
+
+                foreach (Tuple<string, string, string> duplicateImage in duplicated)
+                {
+                    if (duplicateImage.Item1.Equals(duplicatePostURL))
+                    {
+                        res = duplicateImage.Item3;
+                        tmpList.Add(duplicateImage.Item2);
+                    }
+                }
+                finalDuplicates.Add(new Tuple<string, string>(duplicatePostURL, res), tmpList);
+            }
+
+            return finalDuplicates;
+        }
+
+        private static void RemoveDuplicates()
+        {
+
         }
     }
 }

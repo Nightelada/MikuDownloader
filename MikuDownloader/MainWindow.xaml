@@ -31,5 +31,6 @@
         <CheckBox x:Name="chkBoxIgnoreResolution" Content="Ignore resolution" HorizontalAlignment="Left" Margin="170,241,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="chkBoxKeepFilenames" Content="Keep filenames" HorizontalAlignment="Left" Margin="170,265,0,0" VerticalAlignment="Top"/>
         <Button x:Name="btnDownloadRecommendations" Content="Recommendations" HorizontalAlignment="Left" Margin="179,146,0,0" VerticalAlignment="Top" Width="117" Click="btnDownloadRecommendations_Click"/>
+        <Button x:Name="btnDuplicateCheck" Content="Experimental Duplicate Check" HorizontalAlignment="Left" Margin="23,292,0,0" VerticalAlignment="Top" Width="171" Click="btnDuplicateCheck_Click"/>
     </Grid>
 </Window>

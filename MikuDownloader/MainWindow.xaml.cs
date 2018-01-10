@@ -226,6 +226,7 @@ namespace MikuDownloader
             btnDownloadFromList.IsEnabled = false;
             btnDownloadSingleImage.IsEnabled = false;
             btnNewFile.IsEnabled = false;
+            btnDownloadRecommendations.IsEnabled = false;
         }
 
         private void ReleaseAllButtons()
@@ -234,6 +235,7 @@ namespace MikuDownloader
             btnDownloadFromList.IsEnabled = true;
             btnDownloadSingleImage.IsEnabled = true;
             btnNewFile.IsEnabled = true;
+            btnDownloadRecommendations.IsEnabled = true;
         }
 
         // opens the main download directory in the explorer
@@ -248,8 +250,7 @@ namespace MikuDownloader
                 MessageBox.Show("Nothing has been downloaded yet!", "Info");
             }
         }
-
-
+        
         // TODO: Add kawaii icons for all buttons
         private void menuFromFile_Click(object sender, RoutedEventArgs e)
         {
@@ -311,6 +312,95 @@ namespace MikuDownloader
                 MessageBox.Show("No file selected!", "Error");
             }
 
+            ReleaseAllButtons();
+        }
+
+        // checks a folder if there are duplicate images inside
+        private async void btnDuplicateCheck_Click(object sender, RoutedEventArgs e)
+        {
+            BlockAllButtons();
+
+            string logger = string.Empty;
+
+            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
+
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                List<string> images = Directory.GetFiles(folderPath).ToList();
+
+                if (images != null && images.Count > 0)
+                {
+                    txtBlockData.Text = "Checking images...";
+
+                    logger += string.Format("Attempting to generate list of duplicate images for folder : {0}\n", folderPath);
+
+                    var watch = Stopwatch.StartNew();
+
+                    Dictionary<Tuple<string, string>, List<string>> duplicatesList = await ImageHelper.CheckDuplicateImages(images);
+
+                    watch.Stop();
+                    var elapsedMs = watch.ElapsedMilliseconds;
+
+                    logger += string.Format("Total files in folder that were checked: {0}\nTotal time to check images: {1} seconds\n", images.Count(), elapsedMs/1000.0);
+
+                    watch.Reset();
+                    watch.Start();
+
+                    foreach(KeyValuePair<Tuple<string, string>, List<string>> kvp in duplicatesList)
+                    {
+                        logger += string.Format("{0}\nPost URL of duplicate image: {1} | Resolution: {2}\nDuplicate images:\n",Constants.VeryLongLine, kvp.Key.Item1, kvp.Key.Item2);
+
+                        foreach (string file in kvp.Value)
+                        {
+                            string resolution = ImageHelper.GetResolution(Path.Combine(folderPath, file));
+                            logger += string.Format("Image: {0} | Resolution: {1}", file, resolution);
+
+                            try
+                            {
+                                string copyFrom = Path.Combine(folderPath, file);
+                                string duplicateDirectory = string.Empty;
+                                string moveTo = string.Empty;
+
+                                if (kvp.Key.Item2.Equals(resolution))
+                                {
+                                    duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory);
+                                    logger += "\n";
+                                }
+                                else
+                                {
+                                    duplicateDirectory = Path.Combine(folderPath, Constants.BadDuplicatesDirectory);
+                                    logger += string.Format(" - Bad Resolution!\n", file, resolution);
+                                }
+
+                                moveTo = Path.Combine(duplicateDirectory, file);
+                                Directory.CreateDirectory(duplicateDirectory);
+
+                                File.Move(copyFrom, moveTo); // Try to move
+                            }
+                            catch (IOException ex)
+                            {
+                                logger += string.Format("Failed to move file! {0}\n", ex.Message);
+                            }   
+                        }
+                    }
+                    watch.Stop();
+                    elapsedMs = watch.ElapsedMilliseconds;
+
+                    logger += string.Format("Total time to write logfile and move duplicates: {0} seconds\n", elapsedMs / 1000.0);
+
+                    txtBlockData.Text = "Finished checking images! Check log for more info!";
+
+                    File.AppendAllText(ImageHelper.GetDuplicatesLogFileName(), logger);
+                }
+                else
+                {
+                    txtBlockData.Text = "No images found in text file!";
+                }
+            }
+            else
+            {
+                MessageBox.Show("No file selected!", "Error");
+            }
             ReleaseAllButtons();
         }
     }
