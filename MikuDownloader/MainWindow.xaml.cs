@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MikuDownloader.misc;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -227,6 +228,9 @@ namespace MikuDownloader
             btnDownloadSingleImage.IsEnabled = false;
             btnNewFile.IsEnabled = false;
             btnDownloadRecommendations.IsEnabled = false;
+            btnDuplicateCheck.IsEnabled = false;
+            btnTestSerialization.IsEnabled = false;
+            btnDeserializeFolder.IsEnabled = false;
         }
 
         private void ReleaseAllButtons()
@@ -236,6 +240,9 @@ namespace MikuDownloader
             btnDownloadSingleImage.IsEnabled = true;
             btnNewFile.IsEnabled = true;
             btnDownloadRecommendations.IsEnabled = true;
+            btnDuplicateCheck.IsEnabled = true;
+            btnTestSerialization.IsEnabled = true;
+            btnDeserializeFolder.IsEnabled = true;
         }
 
         // opens the main download directory in the explorer
@@ -401,6 +408,120 @@ namespace MikuDownloader
             {
                 MessageBox.Show("No file selected!", "Error");
             }
+            ReleaseAllButtons();
+        }
+
+        private async void btnTestSerialization_Click(object sender, RoutedEventArgs e)
+        {
+            BlockAllButtons();
+            string status = string.Empty;
+            string errorLog = string.Empty;
+
+            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
+
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                List<string> images = Directory.GetFiles(folderPath).ToList();
+
+                if (images != null && images.Count > 0)
+                {
+                    txtBlockData.Text = "Seriazlizing images...";
+                    bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
+                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
+
+                    string xmlStart = "<?xml version=\"1.0\"?>";
+
+                    List<List<ImageDetails>> doubleList = new List<List<ImageDetails>>();
+
+                    foreach (string image in images)
+                    {
+                        var responseTuple = await ImageHelper.GetResponseFromFile(image);
+
+                        var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+
+                        if (imageList != null && imageList.Count > 0)
+                        {
+                            string fileResolution = ImageHelper.GetResolution(image);
+                            string matchResolution = imageList.First().Resolution;
+                            if (!matchResolution.Equals(fileResolution))
+                            {
+                                doubleList.Add(imageList);
+
+                                try
+                                {
+                                    string serializedDirectory = Path.Combine(folderPath, Constants.SerializedDirectory);
+
+                                    string moveTo = Path.Combine(serializedDirectory, Path.GetFileName(image));
+
+                                    Directory.CreateDirectory(serializedDirectory);
+
+                                    File.Move(image, moveTo); // Try to move
+                                }
+                                catch (IOException ex)
+                                {
+                                    errorLog += string.Format("Failed to move file! {0}\n", ex.Message);
+                                }
+                            }
+                        }
+                    }
+
+                    if (doubleList != null && doubleList.Count > 0)
+                    {
+
+                        string newThing = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeDoubleList(doubleList));
+
+                        string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.SerializationFilename);
+
+                        File.WriteAllText(fileName, newThing);
+
+                        File.WriteAllText("serialization_errors.txt", errorLog);
+                    }
+
+                    txtBlockData.Text = "Finished serializing images! Check log for more info!";
+                }
+                else
+                {
+                    txtBlockData.Text = "No images found in text file!";
+                }
+            }
+            else
+            {
+                MessageBox.Show("No file selected!", "Error");
+            }
+
+            ReleaseAllButtons();
+        }
+
+        private void btnDeserializeFolder_Click(object sender, RoutedEventArgs e)
+        {
+            BlockAllButtons();
+
+            string fileName = ImageHelper.BrowseFile(Constants.XmlFilter);
+
+            if (!string.IsNullOrEmpty(fileName))
+            {
+
+                string xmlDoc = File.ReadAllText(fileName);
+
+                List<List<ImageDetails>> images = SerializingHelper.DeSerializeTest(xmlDoc);
+
+                if (images != null && images.Count > 0)
+                {
+                    txtBlockData.Text = "Downloading images...";
+                    ImageHelper.DownloadSerializedImages(images);
+
+                    txtBlockData.Text = "Finished downloading images! Check log for more info!";
+                }
+                else
+                {
+                    txtBlockData.Text = "No images found in text file!";
+                }
+            }
+            else
+            {
+                MessageBox.Show("No file selected!", "Error");
+            }
+
             ReleaseAllButtons();
         }
     }

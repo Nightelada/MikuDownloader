@@ -16,6 +16,8 @@
 
         public static string TextFilter = "Text file |*.txt";
 
+        public static string XmlFilter = "XML file |*.xml";
+
         //
         public static string IQDB = "http://iqdb.org/";
         public static string SauceNAO = "http://saucenao.com/search.php?db=999&dbmaski=32768&url=";
@@ -37,7 +39,8 @@
         public static string DuplicatesLogFileName = "duplicates-log.txt";
         public static string DuplicatesDirectory = "duplicates";
         public static string BadDuplicatesDirectory = "bad-duplicates";
-
+        public static string SerializationFilename = "serialized-images.xml";
+        public static string SerializedDirectory = "serialized";
 
         public static string VeryLongLine = "------------------------------------------------------------------------------------";
 

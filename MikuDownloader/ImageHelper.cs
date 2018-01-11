@@ -1302,5 +1302,40 @@ namespace MikuDownloader
         {
 
         }
+
+        public static void DownloadSerializedImages(List<List<ImageDetails>> imagesToDownload)
+        {
+            foreach (List<ImageDetails> imageList in imagesToDownload)
+            {
+                string status = string.Empty;
+
+                try
+                {
+                    DownloadBestImage(imageList);
+                    Thread.Sleep(1000); //anti-ban
+                }
+                catch (Exception ex)
+                {
+                    status += imageList[0].OriginalURL + "\n";
+
+                    if (ex.InnerException != null)
+                    {
+                        status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                    }
+                    else
+                    {
+                        status += String.Format("Failed to download image!\n{0}\n", ex.Message);
+                    }
+
+                }
+                finally
+                {
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        File.AppendAllText(GetLogFileName(), GetLogTimestamp() + status);
+                    }
+                }
+            }
+        }
     }
 }

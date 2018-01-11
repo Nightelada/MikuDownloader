@@ -84,7 +84,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Constants.cs" />
+    <Compile Include="misc\Constants.cs" />
     <Compile Include="enums\MatchRating.cs" />
     <Compile Include="HelpWindow.xaml.cs">
       <DependentUpon>HelpWindow.xaml</DependentUpon>
@@ -99,6 +99,7 @@
   <ItemGroup>
     <Compile Include="enums\MatchSource.cs" />
     <Compile Include="enums\MatchType.cs" />
+    <Compile Include="misc\SerializingHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

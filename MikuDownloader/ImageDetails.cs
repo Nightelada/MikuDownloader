@@ -18,6 +18,11 @@ namespace MikuDownloader
         public MatchRating MatchRating { get; set; }
         public int Priority { get; set; }
 
+        public ImageDetails()
+        {
+
+        }
+
         public ImageDetails(string post, string tag, string res, string sim, string mType)
         {
             if (!post.Contains("https:") && !post.Contains("http:"))
