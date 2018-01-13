@@ -443,7 +443,7 @@ namespace MikuDownloader
                         {
                             string fileResolution = ImageHelper.GetResolution(image);
                             string matchResolution = imageList.First().Resolution;
-                            if (!matchResolution.Equals(fileResolution))
+                            if (ImageHelper.CheckIfBetterResolution(fileResolution, matchResolution))
                             {
                                 doubleList.Add(imageList);
 

@@ -45,6 +45,34 @@ namespace MikuDownloader
             }
         }
 
+        // check if match has better resolution than original image
+        public static bool CheckIfBetterResolution(string originalRes, string matchRes)
+        {
+            string[] strOrigParams = originalRes.Split(new char[] { '×', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] strMatchParams = matchRes.Split(new char[] { '×', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (strOrigParams.Length >= 2 && strMatchParams.Length >= 2)
+            {
+                int aX = int.Parse(strOrigParams[0]);
+                int aY = int.Parse(strOrigParams[1]);
+
+                int bX = int.Parse(strMatchParams[0]);
+                int bY = int.Parse(strMatchParams[1]);
+
+                if (aX * aY < bX * bY)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         // determines maximum resolution from a list of resolutions
         private static string DetermineBestResolution(List<string> stringsToCheck)
         {
@@ -920,7 +948,7 @@ namespace MikuDownloader
                             string fileResolution = GetResolution(file);
                             string matchResolution = imageList.First().Resolution;
 
-                            if (!matchResolution.Equals(fileResolution) || ignoreResolution == true)
+                            if (CheckIfBetterResolution(fileResolution,matchResolution) || ignoreResolution == true)
                             {
                                 string origImageName;
                                 if (keepFilenames == true)
