@@ -39,8 +39,8 @@
         public static string DuplicatesLogFileName = "duplicates-log.txt";
         public static string DuplicatesDirectory = "duplicates";
         public static string BadDuplicatesDirectory = "bad-duplicates";
-        public static string SerializationFilename = "serialized-images.xml";
-        public static string SerializedDirectory = "serialized";
+        public static string BetterResolutionFilename = "for-download-images.xml";
+        public static string BetterResolutionDirectory = "for-download";
 
         public static string VeryLongLine = "------------------------------------------------------------------------------------";
 

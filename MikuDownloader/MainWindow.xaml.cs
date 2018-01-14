@@ -231,7 +231,6 @@ namespace MikuDownloader
             btnDownloadSingleImage.IsEnabled = false;
             btnNewFile.IsEnabled = false;
             btnDownloadRecommendations.IsEnabled = false;
-            btnDuplicateCheck.IsEnabled = false;
             btnTestSerialization.IsEnabled = false;
             btnDeserializeFolder.IsEnabled = false;
         }
@@ -243,7 +242,6 @@ namespace MikuDownloader
             btnDownloadSingleImage.IsEnabled = true;
             btnNewFile.IsEnabled = true;
             btnDownloadRecommendations.IsEnabled = true;
-            btnDuplicateCheck.IsEnabled = true;
             btnTestSerialization.IsEnabled = true;
             btnDeserializeFolder.IsEnabled = true;
         }
@@ -324,96 +322,7 @@ namespace MikuDownloader
 
             ReleaseAllButtons();
         }
-
-        // checks a folder if there are duplicate images inside
-        private async void btnDuplicateCheck_Click(object sender, RoutedEventArgs e)
-        {
-            BlockAllButtons();
-
-            string logger = string.Empty;
-
-            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
-
-            if (!string.IsNullOrEmpty(folderPath))
-            {
-                List<string> images = Directory.GetFiles(folderPath).ToList();
-
-                if (images != null && images.Count > 0)
-                {
-                    txtBlockData.Text = "Checking images...";
-
-                    logger += string.Format("Attempting to generate list of duplicate images for folder : {0}\n", folderPath);
-
-                    var watch = Stopwatch.StartNew();
-
-                    Dictionary<Tuple<string, string>, List<string>> duplicatesList = await ImageHelper.CheckDuplicateImages(images);
-
-                    watch.Stop();
-                    var elapsedMs = watch.ElapsedMilliseconds;
-
-                    logger += string.Format("Total files in folder that were checked: {0}\nTotal time to check images: {1} seconds\n", images.Count(), elapsedMs/1000.0);
-
-                    watch.Reset();
-                    watch.Start();
-
-                    foreach(KeyValuePair<Tuple<string, string>, List<string>> kvp in duplicatesList)
-                    {
-                        logger += string.Format("{0}\nPost URL of duplicate image: {1} | Resolution: {2}\nDuplicate images:\n",Constants.VeryLongLine, kvp.Key.Item1, kvp.Key.Item2);
-
-                        foreach (string file in kvp.Value)
-                        {
-                            string resolution = ImageHelper.GetResolution(Path.Combine(folderPath, file));
-                            logger += string.Format("Image: {0} | Resolution: {1}", file, resolution);
-
-                            try
-                            {
-                                string copyFrom = Path.Combine(folderPath, file);
-                                string duplicateDirectory = string.Empty;
-                                string moveTo = string.Empty;
-
-                                if (kvp.Key.Item2.Equals(resolution))
-                                {
-                                    duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory);
-                                    logger += "\n";
-                                }
-                                else
-                                {
-                                    duplicateDirectory = Path.Combine(folderPath, Constants.BadDuplicatesDirectory);
-                                    logger += " - Bad Resolution!\n";
-                                }
-
-                                moveTo = Path.Combine(duplicateDirectory, Path.GetFileName(file));
-                                Directory.CreateDirectory(duplicateDirectory);
-
-                                File.Move(copyFrom, moveTo); // Try to move
-                            }
-                            catch (IOException ex)
-                            {
-                                logger += string.Format("Failed to move file! {0}\nCheck other folder!\n", ex.Message);
-                            }   
-                        }
-                    }
-                    watch.Stop();
-                    elapsedMs = watch.ElapsedMilliseconds;
-
-                    logger += string.Format("Total time to write logfile and move duplicates: {0} seconds\n", elapsedMs / 1000.0);
-
-                    txtBlockData.Text = "Finished checking images! Check log for more info!";
-
-                    File.AppendAllText(ImageHelper.GetDuplicatesLogFileName(), logger);
-                }
-                else
-                {
-                    txtBlockData.Text = "No images found in text file!";
-                }
-            }
-            else
-            {
-                MessageBox.Show("No file selected!", "Error");
-            }
-            ReleaseAllButtons();
-        }
-
+        
         private async void btnTestSerialization_Click(object sender, RoutedEventArgs e)
         {
             BlockAllButtons();
@@ -453,7 +362,7 @@ namespace MikuDownloader
 
                                 try
                                 {
-                                    string serializedDirectory = Path.Combine(folderPath, Constants.SerializedDirectory);
+                                    string serializedDirectory = Path.Combine(folderPath, Constants.BetterResolutionDirectory);
 
                                     string moveTo = Path.Combine(serializedDirectory, Path.GetFileName(image));
 
@@ -474,7 +383,7 @@ namespace MikuDownloader
 
                         string newThing = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(allImages));
 
-                        string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.SerializationFilename);
+                        string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.BetterResolutionFilename);
 
                         File.WriteAllText(fileName, newThing);
 
@@ -519,6 +428,50 @@ namespace MikuDownloader
                 else
                 {
                     txtBlockData.Text = "No images found in text file!";
+                }
+            }
+            else
+            {
+                MessageBox.Show("No file selected!", "Error");
+            }
+
+            ReleaseAllButtons();
+        }
+
+        private async void btnCheckFolder_Click(object sender, RoutedEventArgs e)
+        {
+
+            BlockAllButtons();
+
+            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
+            string logger = string.Empty;
+
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                List<string> images = Directory.GetFiles(folderPath).ToList();
+
+                if (images != null && images.Count > 0)
+                {
+                    txtBlockData.Text = "Checking folder for duplicates and lower resolution images...";
+
+                    logger += string.Format("Attempting to generate list of duplicate images for folder : {0}\n", folderPath);
+
+                    var watch = Stopwatch.StartNew();
+
+                    logger += await ImageHelper.CheckFolderFull(images);
+
+                    watch.Stop();
+                    var elapsedMs = watch.ElapsedMilliseconds;
+
+                    logger += string.Format("Total time to write logfile and move images: {0} seconds\n", elapsedMs / 1000.0);
+
+                    File.AppendAllText(ImageHelper.GetDuplicatesLogFileName(), logger);
+
+                    txtBlockData.Text = "Finished checking folder! Check log for more info!";
+                }
+                else
+                {
+                    txtBlockData.Text = "No images found in folder!";
                 }
             }
             else

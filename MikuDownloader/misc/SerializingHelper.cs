@@ -27,9 +27,9 @@ namespace MikuDownloader.misc
         {
             using (StringReader sr= new StringReader(xmlDoc)) //double check that...
             {
-                XmlSerializer _xSer = new XmlSerializer(typeof(List<ImageData>));
+                XmlSerializer xSer = new XmlSerializer(typeof(List<ImageData>));
 
-                var myObject = _xSer.Deserialize(sr);
+                var myObject = xSer.Deserialize(sr);
 
                 return (List<ImageData>)myObject;
             }

@@ -6,6 +6,8 @@ namespace MikuDownloader.image
     {
         public string OriginalImage { get; set; }
         public List<ImageDetails> MatchingImages { get; set; }
+        public bool Duplicate { get; set; }
+        public bool HasBetterResolution { get; set; }
 
         public ImageData()
         {
@@ -18,5 +20,16 @@ namespace MikuDownloader.image
             MatchingImages = new List<ImageDetails>();
         }
 
+        public List<string> GetAllMatchingImages()
+        {
+            List<string> allMatches = new List<string>();
+
+            foreach(ImageDetails matchingImage in MatchingImages)
+            {
+                allMatches.Add(matchingImage.PostURL);
+            }
+
+            return allMatches;
+        }
     }
 }

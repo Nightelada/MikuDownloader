@@ -1264,16 +1264,15 @@ namespace MikuDownloader
         }
 
         // reads image links from folder and check for duplicates
-        public async static Task<Dictionary<Tuple<string, string>, List<string>>> CheckDuplicateImages(List<string> imagesToCheck)
+        public async static Task<string> CheckFolderFull(List<string> imagesToCheck)
         {
-            List<Tuple<string, string, string>> bestMatchesList = new List<Tuple<string, string, string>>();
-            List<ImageData> imagesToSerialize = new List<ImageData>();
-            string errorLog = string.Empty;
+            List<ImageData> imagesToCheckForDuplicates = new List<ImageData>();
 
+            string log = string.Empty;
+            string status = string.Empty;
 
             foreach (string file in imagesToCheck)
             {
-                string status = string.Empty;
 
                 if (IsImage(file))
                 {
@@ -1289,109 +1288,154 @@ namespace MikuDownloader
                             string fileResolution = GetResolution(file);
                             string matchResolution = matchingImages.First().Resolution;
 
-                            var bestMatch = matchingImages.SingleOrDefault(x => x.MatchType.Equals(MatchType.BestMatch)).PostURL;
-
                             if (CheckIfBetterResolution(fileResolution, matchResolution))
                             {
-                                imagesToSerialize.Add(imageData);
+                                imageData.HasBetterResolution = true;
                             }
 
-                            if (bestMatch != null)
-                            {
-                                bestMatchesList.Add(new Tuple<string, string, string>(bestMatch, imageData.OriginalImage, matchResolution));
-                            }
+                            imagesToCheckForDuplicates.Add(imageData);
                         }
                     }
                     catch (Exception ex)
                     {
-
+                        log += string.Format("{0}\n{1}\n", status, ex.Message);
                     }
                 }
             }
+
+            log = MarkDuplicateImages(imagesToCheckForDuplicates);
             
-            var duplicatedPictures =
-                from p in bestMatchesList
-                group p by p.Item1 into g
-                where g.Count() > 1
-                select g.Key;
+            return log;
+        }
 
-            var duplicated = bestMatchesList.FindAll(p => duplicatedPictures.Contains(p.Item1));
+        // Moves duplicate files to different folder
+        private static string MarkDuplicateImages(List<ImageData> images)
+        {
+            string logger = string.Empty;
+            List<ImageData> imagesWithBetterResolution = new List<ImageData>();
 
-            Dictionary<Tuple<string, string>, List<string>> finalDuplicates = new Dictionary<Tuple<string, string>, List<string>>();
-
-            foreach (string duplicatePostURL in duplicatedPictures)
+            // Marks duplicate images
+            for (int i = 0; i < images.Count; i++)
             {
-                List<string> tmpList = new List<string>();
+                List<string> currImage = images[i].GetAllMatchingImages();
 
-                string res = string.Empty;
-
-                foreach (Tuple<string, string, string> duplicateImage in duplicated)
+                if (!images[i].Duplicate)
                 {
-                    if (duplicateImage.Item1.Equals(duplicatePostURL))
+                    for (int j = i + 1; j < images.Count; j++)
                     {
-                        res = duplicateImage.Item3;
-                        tmpList.Add(duplicateImage.Item2);
+                        List<string> imageToCheck = images[j].GetAllMatchingImages();
+
+                        if (!images[j].Duplicate)
+                        {
+                            var isDup = currImage.All(imageToCheck.Contains);
+                            if (isDup)
+                            {
+                                images[j].Duplicate = true;
+                                images[i].Duplicate = true;
+                            }
+                        }
                     }
                 }
-                finalDuplicates.Add(new Tuple<string, string>(duplicatePostURL, res), tmpList);
             }
 
+            List<ImageData> finalDuplicates = new List<ImageData>();
 
-            if (imagesToSerialize != null && imagesToSerialize.Count > 0)
+            foreach (ImageData image in images)
             {
-                List<string> allDuplicatedImages = new List<string>();
-                List<ImageData> finalImagesToSerialize = new List<ImageData>();
-
-                foreach (KeyValuePair<Tuple<string, string>, List<string>> duplicate in finalDuplicates)
+                if (image.Duplicate)
                 {
-                    allDuplicatedImages.AddRange(duplicate.Value);
+                    finalDuplicates.Add(image);
                 }
-
-                foreach(ImageData image in imagesToSerialize)
+                else if (image.HasBetterResolution)
                 {
-                    if (!allDuplicatedImages.Contains(image.OriginalImage))
+                    imagesWithBetterResolution.Add(image);
+                }
+            }
+
+            foreach (ImageData image in finalDuplicates)
+            {
+                string originalFile = image.OriginalImage;
+                string folderPath = Path.GetDirectoryName(originalFile);
+
+                string resolution = GetResolution(Path.Combine(originalFile));
+                logger += string.Format("Image: {0} | Resolution: {1}", originalFile, resolution);
+
+                try
+                {
+                    string copyFrom = originalFile;
+                    string duplicateDirectory = string.Empty;
+                    string moveTo = string.Empty;
+
+                    if (image.MatchingImages.First().Resolution.Equals(resolution))
                     {
-                        finalImagesToSerialize.Add(image);
-                        try
-                        {
-                            string folderPath = Path.GetDirectoryName(image.OriginalImage);
-                            string serializedDirectory = Path.Combine(folderPath, Constants.SerializedDirectory);
+                        duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory);
+                        logger += "\n";
+                    }
+                    else
+                    {
+                        duplicateDirectory = Path.Combine(folderPath, Constants.BadDuplicatesDirectory);
+                        logger += " - Bad Resolution!\n";
+                    }
 
-                            string moveTo = Path.Combine(serializedDirectory, Path.GetFileName(image.OriginalImage));
+                    logger += Constants.VeryLongLine + "\n";
 
-                            Directory.CreateDirectory(serializedDirectory);
+                    moveTo = Path.Combine(duplicateDirectory, Path.GetFileName(originalFile));
+                    Directory.CreateDirectory(duplicateDirectory);
 
-                            File.Move(image.OriginalImage, moveTo); // Try to move
-                        }
-                        catch (IOException ex)
-                        {
-                            errorLog += string.Format("Failed to move file! {0}\n", ex.Message);
-                        }
+                    File.Move(copyFrom, moveTo); // Try to move
+                }
+                catch (IOException ex)
+                {
+                    logger += string.Format("Failed to move file! {0}\n", ex.Message);
+                }
+            }
+
+            MarkImagesForDownload(imagesWithBetterResolution);
+
+            return logger;
+        }
+
+        // creates XML file for downloading images and moves them to different folder
+        private static void MarkImagesForDownload(List<ImageData> images)
+        {
+            string errorLog = string.Empty;
+
+            if (images != null && images.Count > 0)
+            {
+                foreach (ImageData image in images)
+                {
+                    try
+                    {
+                        string folderPath = Path.GetDirectoryName(image.OriginalImage);
+                        string forDownloadDirectory = Path.Combine(folderPath, Constants.BetterResolutionDirectory);
+
+                        string moveTo = Path.Combine(forDownloadDirectory, Path.GetFileName(image.OriginalImage));
+
+                        Directory.CreateDirectory(forDownloadDirectory);
+
+                        File.Move(image.OriginalImage, moveTo); // Try to move
+                    }
+                    catch (IOException ex)
+                    {
+                        errorLog += string.Format("Failed to move file! {0}\n", ex.Message);
                     }
                 }
 
                 string xmlStart = "<?xml version=\"1.0\"?>";
 
-                string newThing = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(finalImagesToSerialize));
+                string serializedImages = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(images));
 
-                string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.SerializationFilename);
+                string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.BetterResolutionFilename);
 
-                File.WriteAllText(fileName, newThing);
+                File.WriteAllText(fileName, serializedImages);
 
                 if (!string.IsNullOrEmpty(errorLog))
                 {
-                    File.WriteAllText("serialization_errors.txt", errorLog);
+                    File.WriteAllText("errors.txt", errorLog);
                 }
             }
-
-            return finalDuplicates;
         }
-
-        private static void RemoveDuplicates()
-        {
-
-        }
-
+        
         public static void DownloadSerializedImages(List<ImageData> imagesToDownload)
         {
             foreach (ImageData imageContainer in imagesToDownload)
