@@ -10,7 +10,6 @@ namespace MikuDownloader
         public string PostURL { get; set; }
         public List<string> Tags { get; set; }
         public string Resolution { get; set; }
-        public string OriginalURL { get; set; }
         public string Similarity { get; set; }
         public string ImageName { get; set; }
         public MatchSource MatchSource { get; set; }

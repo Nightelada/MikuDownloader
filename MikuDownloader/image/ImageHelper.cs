@@ -1,5 +1,7 @@
 ﻿using HtmlAgilityPack;
 using Microsoft.Win32;
+using MikuDownloader.image;
+using MikuDownloader.misc;
 using System;
 using System.Collections.Generic;
 using System.Drawing.Imaging;
@@ -140,7 +142,7 @@ namespace MikuDownloader
 
         // MAIN FUNC
         // this function parses an HTML after reverse-searching from IQDB
-        public static List<ImageDetails> ReverseImageSearch(HtmlDocument htmlDoc, string originalImage, out string status)
+        public static ImageData ReverseImageSearch(HtmlDocument htmlDoc, string originalImage, out string status)
         {
             string response = string.Empty;
 
@@ -210,6 +212,7 @@ namespace MikuDownloader
             List<string> resolutions = new List<string>();
             List<ImageDetails> imagesList = new List<ImageDetails>();
             List<ImageDetails> bestImages = new List<ImageDetails>();
+            ImageData imageContainer = new ImageData(originalImage);
 
             if (matchNodes != null)
             {
@@ -229,7 +232,6 @@ namespace MikuDownloader
                         if (postId != null && tags != null && resolution != null)
                         {
                             ImageDetails tempImg = new ImageDetails(postId, tags, resolution, similarity, matchType);
-                            tempImg.OriginalURL = originalImage;
                             imagesList.Add(tempImg);
 
                             if (!resolutions.Contains(tempImg.Resolution))
@@ -279,8 +281,10 @@ namespace MikuDownloader
                 return null;
             }
 
+            imageContainer.MatchingImages = bestImages;
+
             status = response;
-            return bestImages;
+            return imageContainer;
         }
 
         // parses sankaku result to get recommendations links
@@ -378,13 +382,11 @@ namespace MikuDownloader
 
                         var imageList = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
 
-                        if (imageList != null && imageList.Count > 0)
+                        List<ImageDetails> matchingImages = imageList.MatchingImages;
+
+                        if (matchingImages != null && matchingImages.Count > 0)
                         {
-                            string fileResolution = GetResolution(file);
-                            string matchResolution = imageList.First().Resolution;
-
-
-                            DownloadRecommendations(imageList);
+                            DownloadRecommendations(matchingImages);
                             status += "Successfully downoaded image!\n";
                             totalDownloadedImages += Path.GetFileName(file) + "\n";
 
@@ -898,8 +900,9 @@ namespace MikuDownloader
                     var responseTuple = await GetResponseFromURL(imageURL);
 
                     var imageList = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                    List<ImageDetails> matchingImages = imageList.MatchingImages;
 
-                    DownloadBestImage(imageList);
+                    DownloadBestImage(matchingImages);
                     status += "Successfully downoaded image!\n";
 
                     Thread.Sleep(1000);
@@ -942,11 +945,12 @@ namespace MikuDownloader
                         var responseTuple = await GetResponseFromFile(file);
 
                         var imageList = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                        List<ImageDetails> matchingImages = imageList.MatchingImages;
 
-                        if (imageList != null && imageList.Count > 0)
+                        if (matchingImages != null && matchingImages.Count > 0)
                         {
                             string fileResolution = GetResolution(file);
-                            string matchResolution = imageList.First().Resolution;
+                            string matchResolution = matchingImages.First().Resolution;
 
                             if (CheckIfBetterResolution(fileResolution,matchResolution) || ignoreResolution == true)
                             {
@@ -959,7 +963,7 @@ namespace MikuDownloader
                                 {
                                     origImageName = String.Empty;
                                 }
-                                DownloadBestImage(imageList, origImageName);
+                                DownloadBestImage(matchingImages, origImageName);
                                 status += "Successfully downoaded image!\n";
                                 secondaryLog += String.Format("Image with better resolution was found or resolution is being ignored!\nOriginal res: {0} - new res: {1}\n", fileResolution, matchResolution);
                                 totalDownloadedImages += Path.GetFileName(file) + "\n";
@@ -1263,6 +1267,9 @@ namespace MikuDownloader
         public async static Task<Dictionary<Tuple<string, string>, List<string>>> CheckDuplicateImages(List<string> imagesToCheck)
         {
             List<Tuple<string, string, string>> bestMatchesList = new List<Tuple<string, string, string>>();
+            List<ImageData> imagesToSerialize = new List<ImageData>();
+            string errorLog = string.Empty;
+
 
             foreach (string file in imagesToCheck)
             {
@@ -1274,18 +1281,24 @@ namespace MikuDownloader
                     {
                         var responseTuple = await GetResponseFromFile(file);
 
-                        var imageList = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                        var imageData = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                        List<ImageDetails> matchingImages = imageData.MatchingImages;
 
-                        if (imageList != null && imageList.Count > 0)
+                        if (matchingImages != null && matchingImages.Count > 0)
                         {
-                            string origImageName = Path.GetFileName(file);
+                            string fileResolution = GetResolution(file);
+                            string matchResolution = matchingImages.First().Resolution;
 
-                            var bestMatch = imageList.SingleOrDefault(x => x.MatchType.Equals(MatchType.BestMatch)).PostURL;
-                            var resolution = imageList[0].Resolution;
+                            var bestMatch = matchingImages.SingleOrDefault(x => x.MatchType.Equals(MatchType.BestMatch)).PostURL;
+
+                            if (CheckIfBetterResolution(fileResolution, matchResolution))
+                            {
+                                imagesToSerialize.Add(imageData);
+                            }
 
                             if (bestMatch != null)
                             {
-                                bestMatchesList.Add(new Tuple<string, string, string>(bestMatch, origImageName, resolution));
+                                bestMatchesList.Add(new Tuple<string, string, string>(bestMatch, imageData.OriginalImage, matchResolution));
                             }
                         }
                     }
@@ -1295,7 +1308,7 @@ namespace MikuDownloader
                     }
                 }
             }
-
+            
             var duplicatedPictures =
                 from p in bestMatchesList
                 group p by p.Item1 into g
@@ -1323,6 +1336,54 @@ namespace MikuDownloader
                 finalDuplicates.Add(new Tuple<string, string>(duplicatePostURL, res), tmpList);
             }
 
+
+            if (imagesToSerialize != null && imagesToSerialize.Count > 0)
+            {
+                List<string> allDuplicatedImages = new List<string>();
+                List<ImageData> finalImagesToSerialize = new List<ImageData>();
+
+                foreach (KeyValuePair<Tuple<string, string>, List<string>> duplicate in finalDuplicates)
+                {
+                    allDuplicatedImages.AddRange(duplicate.Value);
+                }
+
+                foreach(ImageData image in imagesToSerialize)
+                {
+                    if (!allDuplicatedImages.Contains(image.OriginalImage))
+                    {
+                        finalImagesToSerialize.Add(image);
+                        try
+                        {
+                            string folderPath = Path.GetDirectoryName(image.OriginalImage);
+                            string serializedDirectory = Path.Combine(folderPath, Constants.SerializedDirectory);
+
+                            string moveTo = Path.Combine(serializedDirectory, Path.GetFileName(image.OriginalImage));
+
+                            Directory.CreateDirectory(serializedDirectory);
+
+                            File.Move(image.OriginalImage, moveTo); // Try to move
+                        }
+                        catch (IOException ex)
+                        {
+                            errorLog += string.Format("Failed to move file! {0}\n", ex.Message);
+                        }
+                    }
+                }
+
+                string xmlStart = "<?xml version=\"1.0\"?>";
+
+                string newThing = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(finalImagesToSerialize));
+
+                string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.SerializationFilename);
+
+                File.WriteAllText(fileName, newThing);
+
+                if (!string.IsNullOrEmpty(errorLog))
+                {
+                    File.WriteAllText("serialization_errors.txt", errorLog);
+                }
+            }
+
             return finalDuplicates;
         }
 
@@ -1331,20 +1392,20 @@ namespace MikuDownloader
 
         }
 
-        public static void DownloadSerializedImages(List<List<ImageDetails>> imagesToDownload)
+        public static void DownloadSerializedImages(List<ImageData> imagesToDownload)
         {
-            foreach (List<ImageDetails> imageList in imagesToDownload)
+            foreach (ImageData imageContainer in imagesToDownload)
             {
                 string status = string.Empty;
 
                 try
                 {
-                    DownloadBestImage(imageList);
+                    DownloadBestImage(imageContainer.MatchingImages);
                     Thread.Sleep(1000); //anti-ban
                 }
                 catch (Exception ex)
                 {
-                    status += imageList[0].OriginalURL + "\n";
+                    status += imageContainer.OriginalImage + "\n";
 
                     if (ex.InnerException != null)
                     {

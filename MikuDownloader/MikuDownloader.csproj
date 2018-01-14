@@ -84,13 +84,14 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="image\ImageData.cs" />
     <Compile Include="misc\Constants.cs" />
     <Compile Include="enums\MatchRating.cs" />
     <Compile Include="HelpWindow.xaml.cs">
       <DependentUpon>HelpWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ImageDetails.cs" />
-    <Compile Include="ImageHelper.cs" />
+    <Compile Include="image\ImageDetails.cs" />
+    <Compile Include="image\ImageHelper.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>

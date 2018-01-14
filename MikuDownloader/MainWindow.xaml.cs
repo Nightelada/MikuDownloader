@@ -1,4 +1,5 @@
-﻿using MikuDownloader.misc;
+﻿using MikuDownloader.image;
+using MikuDownloader.misc;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -39,11 +40,12 @@ namespace MikuDownloader
                     {
                         var responseTuple = await ImageHelper.GetResponseFromURL(imageURL);
 
-                        var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                        var imageData = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                        List<ImageDetails> matchesList = imageData.MatchingImages;
 
-                        if (imageList != null && imageList.Count > 0)
+                        if (matchesList != null && matchesList.Count > 0)
                         {
-                            ImageHelper.DownloadBestImage(imageList);
+                            ImageHelper.DownloadBestImage(matchesList);
                             status += "Successfully downoaded image!\n";
                         }
                         txtBlockData.Text = status;
@@ -94,16 +96,17 @@ namespace MikuDownloader
                 {
                     var responseTuple = await ImageHelper.GetResponseFromFile(filename);
 
-                    var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                    var imageData = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                    List<ImageDetails> matchesList = imageData.MatchingImages;
 
-                    if (imageList != null && imageList.Count > 0)
+                    if (matchesList != null && matchesList.Count > 0)
                     {
                         var res = ImageHelper.GetResolution(filename);
                         bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
                         bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
 
 
-                        if (imageList.First().Resolution.Equals(res) && ignoreResolution != true)
+                        if (matchesList.First().Resolution.Equals(res) && ignoreResolution != true)
                         {
                             status += "Image checked had same resolution! Image was not downloaded! If you want to download it anyway check the logs!\n";
                         }
@@ -114,7 +117,7 @@ namespace MikuDownloader
                             {
                                 oldFilename = Path.GetFileNameWithoutExtension(filename);
                             }
-                            ImageHelper.DownloadBestImage(imageList, oldFilename);
+                            ImageHelper.DownloadBestImage(matchesList, oldFilename);
                             status += "Successfully downoaded image!\n";
                         }
                     }
@@ -376,17 +379,17 @@ namespace MikuDownloader
                                 else
                                 {
                                     duplicateDirectory = Path.Combine(folderPath, Constants.BadDuplicatesDirectory);
-                                    logger += string.Format(" - Bad Resolution!\n", file, resolution);
+                                    logger += " - Bad Resolution!\n";
                                 }
 
-                                moveTo = Path.Combine(duplicateDirectory, file);
+                                moveTo = Path.Combine(duplicateDirectory, Path.GetFileName(file));
                                 Directory.CreateDirectory(duplicateDirectory);
 
                                 File.Move(copyFrom, moveTo); // Try to move
                             }
                             catch (IOException ex)
                             {
-                                logger += string.Format("Failed to move file! {0}\n", ex.Message);
+                                logger += string.Format("Failed to move file! {0}\nCheck other folder!\n", ex.Message);
                             }   
                         }
                     }
@@ -431,21 +434,22 @@ namespace MikuDownloader
 
                     string xmlStart = "<?xml version=\"1.0\"?>";
 
-                    List<List<ImageDetails>> doubleList = new List<List<ImageDetails>>();
+                    List<ImageData> allImages = new List<ImageData>();
 
                     foreach (string image in images)
                     {
                         var responseTuple = await ImageHelper.GetResponseFromFile(image);
 
-                        var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                        var imageData = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                        List<ImageDetails> matchesList = imageData.MatchingImages;
 
-                        if (imageList != null && imageList.Count > 0)
+                        if (matchesList != null && matchesList.Count > 0)
                         {
                             string fileResolution = ImageHelper.GetResolution(image);
-                            string matchResolution = imageList.First().Resolution;
+                            string matchResolution = matchesList.First().Resolution;
                             if (ImageHelper.CheckIfBetterResolution(fileResolution, matchResolution))
                             {
-                                doubleList.Add(imageList);
+                                allImages.Add(imageData);
 
                                 try
                                 {
@@ -465,10 +469,10 @@ namespace MikuDownloader
                         }
                     }
 
-                    if (doubleList != null && doubleList.Count > 0)
+                    if (allImages != null && allImages.Count > 0)
                     {
 
-                        string newThing = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeDoubleList(doubleList));
+                        string newThing = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(allImages));
 
                         string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.SerializationFilename);
 
@@ -503,7 +507,7 @@ namespace MikuDownloader
 
                 string xmlDoc = File.ReadAllText(fileName);
 
-                List<List<ImageDetails>> images = SerializingHelper.DeSerializeTest(xmlDoc);
+                List<ImageData> images = SerializingHelper.DeserializeImageList(xmlDoc);
 
                 if (images != null && images.Count > 0)
                 {
