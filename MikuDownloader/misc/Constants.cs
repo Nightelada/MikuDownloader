@@ -41,6 +41,7 @@
         public static string BadDuplicatesDirectory = "bad-duplicates";
         public static string BetterResolutionFilename = "for-download-images.xml";
         public static string BetterResolutionDirectory = "for-download";
+        public static string GoodResolutionDirectory = "good-resolution";
 
         public static string VeryLongLine = "------------------------------------------------------------------------------------";
 

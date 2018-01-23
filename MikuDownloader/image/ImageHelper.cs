@@ -824,6 +824,11 @@ namespace MikuDownloader
                     throw new ArgumentException(ex.Message);
                 }
             }
+
+            if (!flagSuccessfullDownload)
+            {
+                throw new ArgumentException("Someething went wrong when downloading the image!");
+            }
         }
 
         // saves the image from the given url, to the selected path, with the given filename (extension is generated dynamically)
@@ -1264,7 +1269,7 @@ namespace MikuDownloader
         }
 
         // reads image links from folder and check for duplicates
-        public async static Task<string> CheckFolderFull(List<string> imagesToCheck)
+        public async static Task<string> CheckFolderFull(List<string> imagesToCheck, bool? ignoreResolution)
         {
             List<ImageData> imagesToCheckForDuplicates = new List<ImageData>();
 
@@ -1313,11 +1318,13 @@ namespace MikuDownloader
         {
             string logger = string.Empty;
             List<ImageData> imagesWithBetterResolution = new List<ImageData>();
+            List<ImageData> imagesWithSameResolution = new List<ImageData>();
 
             // Marks duplicate images
             for (int i = 0; i < images.Count; i++)
             {
                 List<string> currImage = images[i].GetAllMatchingImages();
+                int dupIndex = i;
 
                 if (!images[i].Duplicate)
                 {
@@ -1331,7 +1338,9 @@ namespace MikuDownloader
                             if (isDup)
                             {
                                 images[j].Duplicate = true;
+                                images[j].DuplicateIndex = dupIndex;
                                 images[i].Duplicate = true;
+                                images[i].DuplicateIndex = dupIndex;
                             }
                         }
                     }
@@ -1350,9 +1359,15 @@ namespace MikuDownloader
                 {
                     imagesWithBetterResolution.Add(image);
                 }
+                else if (!image.HasBetterResolution)
+                {
+                    imagesWithSameResolution.Add(image);
+                }
             }
 
-            foreach (ImageData image in finalDuplicates)
+            List<ImageData> sortedDuplicates = finalDuplicates.OrderBy(x => x.DuplicateIndex).ToList();
+
+            foreach (ImageData image in sortedDuplicates)
             {
                 string originalFile = image.OriginalImage;
                 string folderPath = Path.GetDirectoryName(originalFile);
@@ -1368,12 +1383,12 @@ namespace MikuDownloader
 
                     if (image.MatchingImages.First().Resolution.Equals(resolution))
                     {
-                        duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory);
+                        duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory, image.DuplicateIndex.ToString());
                         logger += "\n";
                     }
                     else
                     {
-                        duplicateDirectory = Path.Combine(folderPath, Constants.BadDuplicatesDirectory);
+                        duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory, image.DuplicateIndex.ToString(), Constants.BadDuplicatesDirectory);
                         logger += " - Bad Resolution!\n";
                     }
 
@@ -1391,6 +1406,7 @@ namespace MikuDownloader
             }
 
             MarkImagesForDownload(imagesWithBetterResolution);
+            MarkImagesWithNoChange(imagesWithSameResolution);
 
             return logger;
         }
@@ -1431,13 +1447,48 @@ namespace MikuDownloader
 
                 if (!string.IsNullOrEmpty(errorLog))
                 {
-                    File.WriteAllText("errors.txt", errorLog);
+                    File.AppendAllText("errors.txt", errorLog);
                 }
             }
         }
-        
+
+        // moves files with proper resolution to different folder
+        private static void MarkImagesWithNoChange(List<ImageData> images)
+        {
+            string errorLog = string.Empty;
+
+            if (images != null && images.Count > 0)
+            {
+                foreach (ImageData image in images)
+                {
+                    try
+                    {
+                        string folderPath = Path.GetDirectoryName(image.OriginalImage);
+                        string goodResolutionDirectory = Path.Combine(folderPath, Constants.GoodResolutionDirectory);
+
+                        string moveTo = Path.Combine(goodResolutionDirectory, Path.GetFileName(image.OriginalImage));
+
+                        Directory.CreateDirectory(goodResolutionDirectory);
+
+                        File.Move(image.OriginalImage, moveTo); // Try to move
+                    }
+                    catch (IOException ex)
+                    {
+                        errorLog += string.Format("Failed to move file! {0}\n", ex.Message);
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(errorLog))
+                {
+                    File.AppendAllText("errors.txt", errorLog);
+                }
+            }
+        }
+
         public static void DownloadSerializedImages(List<ImageData> imagesToDownload)
         {
+            string imagesNotDownloaded = string.Empty;
+
             foreach (ImageData imageContainer in imagesToDownload)
             {
                 string status = string.Empty;
@@ -1450,6 +1501,7 @@ namespace MikuDownloader
                 catch (Exception ex)
                 {
                     status += imageContainer.OriginalImage + "\n";
+                    imagesNotDownloaded += imageContainer.OriginalImage + "\n";
 
                     if (ex.InnerException != null)
                     {
@@ -1459,13 +1511,13 @@ namespace MikuDownloader
                     {
                         status += String.Format("Failed to download image!\n{0}\n", ex.Message);
                     }
-
                 }
                 finally
                 {
                     if (!string.IsNullOrEmpty(status))
                     {
                         File.AppendAllText(GetLogFileName(), GetLogTimestamp() + status);
+                        File.AppendAllText("images-not-downloaded", imagesNotDownloaded + Constants.VeryLongLine + "\n");
                     }
                 }
             }

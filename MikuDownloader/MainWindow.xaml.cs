@@ -452,13 +452,15 @@ namespace MikuDownloader
 
                 if (images != null && images.Count > 0)
                 {
+                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
+
                     txtBlockData.Text = "Checking folder for duplicates and lower resolution images...";
 
                     logger += string.Format("Attempting to generate list of duplicate images for folder : {0}\n", folderPath);
 
                     var watch = Stopwatch.StartNew();
 
-                    logger += await ImageHelper.CheckFolderFull(images);
+                    logger += await ImageHelper.CheckFolderFull(images, ignoreResolution);
 
                     watch.Stop();
                     var elapsedMs = watch.ElapsedMilliseconds;
