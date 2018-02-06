@@ -513,8 +513,11 @@ namespace MikuDownloader
             {
                 throw new ArgumentException("Error when parsing danbooru url! Image was probably deleted or removed!");
             }
-
-            origImage = String.Format("https://danbooru.donmai.us{0}", origImage);
+            
+            if (!origImage.StartsWith("https"))
+            {
+                origImage = String.Format("https://danbooru.donmai.us{0}", origImage);
+            }
 
             return origImage;
         }
@@ -1487,12 +1490,11 @@ namespace MikuDownloader
 
         public static void DownloadSerializedImages(List<ImageData> imagesToDownload)
         {
-            string imagesNotDownloaded = string.Empty;
+            string listOfNotDownloadedImages = string.Empty;
+            string status = string.Empty;
 
             foreach (ImageData imageContainer in imagesToDownload)
             {
-                string status = string.Empty;
-
                 try
                 {
                     DownloadBestImage(imageContainer.MatchingImages);
@@ -1501,7 +1503,7 @@ namespace MikuDownloader
                 catch (Exception ex)
                 {
                     status += imageContainer.OriginalImage + "\n";
-                    imagesNotDownloaded += imageContainer.OriginalImage + "\n";
+                    listOfNotDownloadedImages += imageContainer.OriginalImage + "\n";
 
                     if (ex.InnerException != null)
                     {
@@ -1514,12 +1516,17 @@ namespace MikuDownloader
                 }
                 finally
                 {
-                    if (!string.IsNullOrEmpty(status))
+                    if (string.IsNullOrEmpty(status))
                     {
+                        status += Constants.VeryLongLine + "\n";
                         File.AppendAllText(GetLogFileName(), GetLogTimestamp() + status);
-                        File.AppendAllText("images-not-downloaded", imagesNotDownloaded + Constants.VeryLongLine + "\n");
                     }
                 }
+            }
+
+            if (!string.IsNullOrEmpty(status))
+            {
+                File.AppendAllText("images-not-downloaded.txt", "Images not downloaded:\n" + listOfNotDownloadedImages + Constants.VeryLongLine + status + Constants.VeryLongLine + "\n");
             }
         }
     }
