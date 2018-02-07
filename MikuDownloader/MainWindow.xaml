@@ -23,16 +23,14 @@
         </DockPanel>
         <TextBlock HorizontalAlignment="Left" Margin="23,46,0,0" TextWrapping="Wrap" Text="Type URL of picture here:" VerticalAlignment="Top"/>
         <TextBox x:Name="txtBoxURL" HorizontalAlignment="Left" Height="59" Margin="23,67,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="179"/>
-        <Button x:Name="btnDownloadSingleImage" Content="From URL" HorizontalAlignment="Left" Margin="209,70,0,0" VerticalAlignment="Top" Width="75" Click="btnDownloadSingleImage_Click"/>
+        <Button x:Name="btnDownloadFromURL" Content="From URL" HorizontalAlignment="Left" Margin="209,70,0,0" VerticalAlignment="Top" Width="75" Click="btnDownloadFromURL_Click"/>
         <TextBox x:Name="txtBlockData" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" Margin="312,46,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="242" Width="389"/>
         <Button x:Name="btnDownloadFromList" Content="Download from list" HorizontalAlignment="Left" Margin="23,146,0,0" VerticalAlignment="Top" Width="133" Click="btnDownloadFromList_Click"/>
-        <Button x:Name="btnNewFile" Content="From File" HorizontalAlignment="Left" Margin="23,233,0,0" VerticalAlignment="Top" Width="75" Click="btnNewFile_Click"/>
+        <Button x:Name="btnDownloadFromFile" Content="From File" HorizontalAlignment="Left" Margin="23,233,0,0" VerticalAlignment="Top" Width="75" Click="btnDownLoadFromFile_Click"/>
         <Button x:Name="btnDownloadFromFolder" Content="Download from folder" HorizontalAlignment="Left" Margin="23,260,0,0" VerticalAlignment="Top" Width="133" Click="btnDownloadFromFolder_Click"/>
         <CheckBox x:Name="chkBoxIgnoreResolution" Content="Ignore resolution" HorizontalAlignment="Left" Margin="170,241,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="chkBoxKeepFilenames" Content="Keep filenames" HorizontalAlignment="Left" Margin="170,265,0,0" VerticalAlignment="Top"/>
-        <Button x:Name="btnDownloadRecommendations" Content="Recommendations" HorizontalAlignment="Left" Margin="179,146,0,0" VerticalAlignment="Top" Width="117" Click="btnDownloadRecommendations_Click"/>
-        <Button x:Name="btnTestSerialization" Content="Serialize Folder" HorizontalAlignment="Left" Margin="23,189,0,0" VerticalAlignment="Top" Width="133" Click="btnTestSerialization_Click"/>
-        <Button x:Name="btnDeserializeFolder" Content="Download Serialized" HorizontalAlignment="Left" Margin="179,189,0,0" VerticalAlignment="Top" Width="117" Click="btnDeserializeFolder_Click"/>
-        <Button x:Name="btnCheckFolder" Content="Check Folder" HorizontalAlignment="Left" Margin="127,291,0,0" VerticalAlignment="Top" Width="75" Click="btnCheckFolder_Click"/>
+        <Button x:Name="btnDeserializeFolder" Content="Download From XML" HorizontalAlignment="Left" Margin="179,189,0,0" VerticalAlignment="Top" Width="117" Click="btnDeserializeFolder_Click"/>
+        <Button x:Name="btnCheckFolder" Content="Check Folder" HorizontalAlignment="Left" Margin="23,189,0,0" VerticalAlignment="Top" Width="133" Click="btnCheckFolder_Click"/>
     </Grid>
 </Window>

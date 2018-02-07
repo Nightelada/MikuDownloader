@@ -101,6 +101,7 @@
     <Compile Include="enums\MatchSource.cs" />
     <Compile Include="enums\MatchType.cs" />
     <Compile Include="misc\SerializingHelper.cs" />
+    <Compile Include="misc\Utilities.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

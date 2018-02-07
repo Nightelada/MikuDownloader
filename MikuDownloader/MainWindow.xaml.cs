@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace MikuDownloader
 {
@@ -14,13 +15,24 @@ namespace MikuDownloader
     /// </summary>
     public partial class MainWindow : Window
     {
+        private List<Button> buttonsList;
+
         public MainWindow()
         {
             InitializeComponent();
+            buttonsList = new List<Button>()
+            {
+                btnDownloadFromFolder,
+                btnDownloadFromList,
+                btnDownloadFromFile,
+                btnDownloadFromURL,
+                btnCheckFolder,
+                btnDeserializeFolder
+            };
         }
         
         // downloads from URL inputted in text field
-        private async void btnDownloadSingleImage_Click(object sender, RoutedEventArgs e)
+        private async void btnDownloadFromURL_Click(object sender, RoutedEventArgs e)
         {
             BlockAllButtons();
             txtBlockData.Text = "Downloading...";
@@ -65,7 +77,7 @@ namespace MikuDownloader
                     }
                     finally
                     {
-                        File.AppendAllText(ImageHelper.GetLogFileName(), ImageHelper.GetLogTimestamp() + status);
+                        File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
                     }
                 }
                 else
@@ -82,12 +94,12 @@ namespace MikuDownloader
         }
 
         // downloads from file selected with brose button
-        private async void btnNewFile_Click(object sender, RoutedEventArgs e)
+        private async void btnDownLoadFromFile_Click(object sender, RoutedEventArgs e)
         {
             BlockAllButtons();
 
             txtBlockData.Text = "Downloading...";
-            string filename = ImageHelper.BrowseFile(Constants.ImagesFilter);
+            string filename = Utilities.BrowseFile(Constants.ImagesFilter);
             string status = string.Empty;
 
             if (!string.IsNullOrEmpty(filename))
@@ -101,7 +113,7 @@ namespace MikuDownloader
 
                     if (matchesList != null && matchesList.Count > 0)
                     {
-                        var res = ImageHelper.GetResolution(filename);
+                        var res = Utilities.GetResolution(filename);
                         bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
                         bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
 
@@ -138,7 +150,7 @@ namespace MikuDownloader
                 }
                 finally
                 {
-                    File.AppendAllText(ImageHelper.GetLogFileName(), ImageHelper.GetLogTimestamp() + status);
+                    File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
                 }
             }
             else
@@ -153,11 +165,11 @@ namespace MikuDownloader
         {
             BlockAllButtons();
 
-            string filepath = ImageHelper.BrowseFile(Constants.TextFilter);
+            string filepath = Utilities.BrowseFile(Constants.TextFilter);
 
             if (!string.IsNullOrEmpty(filepath))
             {
-                List<string> urls = ImageHelper.ParseURLs(filepath);
+                List<string> urls = Utilities.ParseURLs(filepath);
                 List<string> finalUrls = new List<string>();
 
                 if (urls != null && urls.Count > 0)
@@ -195,7 +207,7 @@ namespace MikuDownloader
         {
             BlockAllButtons();
 
-            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
+            string folderPath = Utilities.BrowseDirectory(Constants.ImagesFilter);
 
             if (!string.IsNullOrEmpty(folderPath))
             {
@@ -224,26 +236,85 @@ namespace MikuDownloader
             ReleaseAllButtons();
         }
 
-        private void BlockAllButtons()
+        // downloads images from checked folder, reading from generated serialization XML
+        private void btnDeserializeFolder_Click(object sender, RoutedEventArgs e)
         {
-            btnDownloadFromFolder.IsEnabled = false;
-            btnDownloadFromList.IsEnabled = false;
-            btnDownloadSingleImage.IsEnabled = false;
-            btnNewFile.IsEnabled = false;
-            btnDownloadRecommendations.IsEnabled = false;
-            btnTestSerialization.IsEnabled = false;
-            btnDeserializeFolder.IsEnabled = false;
+            BlockAllButtons();
+
+            string fileName = Utilities.BrowseFile(Constants.XmlFilter);
+
+            if (!string.IsNullOrEmpty(fileName))
+            {
+
+                string xmlDoc = File.ReadAllText(fileName);
+
+                List<ImageData> images = SerializingHelper.DeserializeImageList(xmlDoc);
+
+                if (images != null && images.Count > 0)
+                {
+                    txtBlockData.Text = "Downloading images...";
+                    ImageHelper.DownloadSerializedImages(images);
+
+                    txtBlockData.Text = "Finished downloading images! Check log for more info!";
+                }
+                else
+                {
+                    txtBlockData.Text = "No images found in text file!";
+                }
+            }
+            else
+            {
+                MessageBox.Show("No file selected!", "Error");
+            }
+
+            ReleaseAllButtons();
         }
 
-        private void ReleaseAllButtons()
+        // checks folder for images that have duplicates or better resolution
+        private async void btnCheckFolder_Click(object sender, RoutedEventArgs e)
         {
-            btnDownloadFromFolder.IsEnabled = true;
-            btnDownloadFromList.IsEnabled = true;
-            btnDownloadSingleImage.IsEnabled = true;
-            btnNewFile.IsEnabled = true;
-            btnDownloadRecommendations.IsEnabled = true;
-            btnTestSerialization.IsEnabled = true;
-            btnDeserializeFolder.IsEnabled = true;
+
+            BlockAllButtons();
+
+            string folderPath = Utilities.BrowseDirectory(Constants.ImagesFilter);
+            string logger = string.Empty;
+
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                List<string> images = Directory.GetFiles(folderPath).ToList();
+
+                if (images != null && images.Count > 0)
+                {
+                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
+
+                    txtBlockData.Text = "Checking folder for duplicates and lower resolution images...";
+
+                    logger += string.Format("Attempting to generate list of duplicate images for folder : {0}\n", folderPath);
+
+                    var watch = Stopwatch.StartNew();
+
+                    logger += await ImageHelper.CheckFolderFull(images, ignoreResolution);
+
+                    watch.Stop();
+                    var elapsedMs = watch.ElapsedMilliseconds;
+
+                    logger += string.Format("Total time to write logfile and move images: {0} seconds\n", elapsedMs / 1000.0);
+
+                    File.AppendAllText(Utilities.GetDuplicatesLogFileName(), logger);
+
+                    txtBlockData.Text = "Finished checking folder! Check log for more info!";
+                }
+                else
+                {
+                    txtBlockData.Text = "No images found in folder!";
+                }
+            }
+            else
+            {
+                MessageBox.Show("No file selected!", "Error");
+            }
+
+            ReleaseAllButtons();
         }
 
         // opens the main download directory in the explorer
@@ -289,199 +360,20 @@ namespace MikuDownloader
             Close();
         }
 
-        // downloads sankaku recommendations
-        private async void btnDownloadRecommendations_Click(object sender, RoutedEventArgs e)
+        private void BlockAllButtons()
         {
-            BlockAllButtons();
-
-            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
-
-            if (!string.IsNullOrEmpty(folderPath))
+            foreach (Button b in buttonsList)
             {
-                List<string> images = Directory.GetFiles(folderPath).ToList();
-
-                if (images != null && images.Count > 0)
-                {
-                    txtBlockData.Text = "Downloading images...";
-                    bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
-                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
-
-                    await ImageHelper.DownloadBulkRecommendationsFromFolder(images);
-
-                    txtBlockData.Text = "Finished downloading images! Check log for more info!";
-                }
-                else
-                {
-                    txtBlockData.Text = "No images found in text file!";
-                }
+                b.IsEnabled = false;
             }
-            else
-            {
-                MessageBox.Show("No file selected!", "Error");
-            }
-
-            ReleaseAllButtons();
-        }
-        
-        private async void btnTestSerialization_Click(object sender, RoutedEventArgs e)
-        {
-            BlockAllButtons();
-            string status = string.Empty;
-            string errorLog = string.Empty;
-
-            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
-
-            if (!string.IsNullOrEmpty(folderPath))
-            {
-                List<string> images = Directory.GetFiles(folderPath).ToList();
-
-                if (images != null && images.Count > 0)
-                {
-                    txtBlockData.Text = "Seriazlizing images...";
-                    bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
-                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
-
-                    string xmlStart = "<?xml version=\"1.0\"?>";
-
-                    List<ImageData> allImages = new List<ImageData>();
-
-                    foreach (string image in images)
-                    {
-                        var responseTuple = await ImageHelper.GetResponseFromFile(image);
-
-                        var imageData = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
-                        List<ImageDetails> matchesList = imageData.MatchingImages;
-
-                        if (matchesList != null && matchesList.Count > 0)
-                        {
-                            string fileResolution = ImageHelper.GetResolution(image);
-                            string matchResolution = matchesList.First().Resolution;
-                            if (ImageHelper.CheckIfBetterResolution(fileResolution, matchResolution))
-                            {
-                                allImages.Add(imageData);
-
-                                try
-                                {
-                                    string serializedDirectory = Path.Combine(folderPath, Constants.BetterResolutionDirectory);
-
-                                    string moveTo = Path.Combine(serializedDirectory, Path.GetFileName(image));
-
-                                    Directory.CreateDirectory(serializedDirectory);
-
-                                    File.Move(image, moveTo); // Try to move
-                                }
-                                catch (IOException ex)
-                                {
-                                    errorLog += string.Format("Failed to move file! {0}\n", ex.Message);
-                                }
-                            }
-                        }
-                    }
-
-                    if (allImages != null && allImages.Count > 0)
-                    {
-
-                        string newThing = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(allImages));
-
-                        string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.BetterResolutionFilename);
-
-                        File.WriteAllText(fileName, newThing);
-
-                        File.WriteAllText("serialization_errors.txt", errorLog);
-                    }
-
-                    txtBlockData.Text = "Finished serializing images! Check log for more info!";
-                }
-                else
-                {
-                    txtBlockData.Text = "No images found in text file!";
-                }
-            }
-            else
-            {
-                MessageBox.Show("No file selected!", "Error");
-            }
-
-            ReleaseAllButtons();
         }
 
-        private void btnDeserializeFolder_Click(object sender, RoutedEventArgs e)
+        private void ReleaseAllButtons()
         {
-            BlockAllButtons();
-
-            string fileName = ImageHelper.BrowseFile(Constants.XmlFilter);
-
-            if (!string.IsNullOrEmpty(fileName))
+            foreach (Button b in buttonsList)
             {
-
-                string xmlDoc = File.ReadAllText(fileName);
-
-                List<ImageData> images = SerializingHelper.DeserializeImageList(xmlDoc);
-
-                if (images != null && images.Count > 0)
-                {
-                    txtBlockData.Text = "Downloading images...";
-                    ImageHelper.DownloadSerializedImages(images);
-
-                    txtBlockData.Text = "Finished downloading images! Check log for more info!";
-                }
-                else
-                {
-                    txtBlockData.Text = "No images found in text file!";
-                }
+                b.IsEnabled = true;
             }
-            else
-            {
-                MessageBox.Show("No file selected!", "Error");
-            }
-
-            ReleaseAllButtons();
-        }
-
-        private async void btnCheckFolder_Click(object sender, RoutedEventArgs e)
-        {
-
-            BlockAllButtons();
-
-            string folderPath = ImageHelper.BrowseDirectory(Constants.ImagesFilter);
-            string logger = string.Empty;
-
-            if (!string.IsNullOrEmpty(folderPath))
-            {
-                List<string> images = Directory.GetFiles(folderPath).ToList();
-
-                if (images != null && images.Count > 0)
-                {
-                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
-
-                    txtBlockData.Text = "Checking folder for duplicates and lower resolution images...";
-
-                    logger += string.Format("Attempting to generate list of duplicate images for folder : {0}\n", folderPath);
-
-                    var watch = Stopwatch.StartNew();
-
-                    logger += await ImageHelper.CheckFolderFull(images, ignoreResolution);
-
-                    watch.Stop();
-                    var elapsedMs = watch.ElapsedMilliseconds;
-
-                    logger += string.Format("Total time to write logfile and move images: {0} seconds\n", elapsedMs / 1000.0);
-
-                    File.AppendAllText(ImageHelper.GetDuplicatesLogFileName(), logger);
-
-                    txtBlockData.Text = "Finished checking folder! Check log for more info!";
-                }
-                else
-                {
-                    txtBlockData.Text = "No images found in folder!";
-                }
-            }
-            else
-            {
-                MessageBox.Show("No file selected!", "Error");
-            }
-
-            ReleaseAllButtons();
         }
     }
 }

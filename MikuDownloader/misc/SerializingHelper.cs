@@ -9,6 +9,7 @@ namespace MikuDownloader.misc
 {
     public class SerializingHelper
     {
+        // serializes ImageData objects to XML
         public static string SerializeImageList(List<ImageData> serializableObjectList)
         {
             var doc = new XDocument();
@@ -23,9 +24,10 @@ namespace MikuDownloader.misc
             return doc.ToString();
         }
 
+        // deserializes ImageData object from XML
         public static List<ImageData> DeserializeImageList(string xmlDoc)
         {
-            using (StringReader sr= new StringReader(xmlDoc)) //double check that...
+            using (StringReader sr= new StringReader(xmlDoc))
             {
                 XmlSerializer xSer = new XmlSerializer(typeof(List<ImageData>));
 
