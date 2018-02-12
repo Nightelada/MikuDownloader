@@ -5,8 +5,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using XamlAnimatedGif;
 
 namespace MikuDownloader
 {
@@ -29,13 +32,16 @@ namespace MikuDownloader
                 btnCheckFolder,
                 btnDeserializeFolder
             };
+
+            //AnimationBehavior.SetSourceUri(testImage, new Uri("ms-resource:test.gif"));
+
         }
         
         // downloads from URL inputted in text field
         private async void btnDownloadFromURL_Click(object sender, RoutedEventArgs e)
         {
             BlockAllButtons();
-            txtBlockData.Text = "Downloading...";
+            txtBlockData.Text = "Checking for matching images...\n";
 
             string imageURL = txtBoxURL.Text;
             string status = string.Empty;
@@ -53,14 +59,32 @@ namespace MikuDownloader
                         var responseTuple = await ImageHelper.GetResponseFromURL(imageURL);
 
                         var imageData = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
-                        List<ImageDetails> matchesList = imageData.MatchingImages;
-
-                        if (matchesList != null && matchesList.Count > 0)
+                        if (imageData != null)
                         {
-                            ImageHelper.DownloadBestImage(matchesList);
-                            status += "Successfully downoaded image!\n";
+                            List<ImageDetails> matchesList = imageData.MatchingImages;
+                            string errorText = string.Empty;
+
+                            if (matchesList != null && matchesList.Count > 0)
+                            {
+                                txtBlockData.Text += "Image found! Attempting to download...\n";
+                                await Task.Run(() => errorText = ImageHelper.DownloadBestImage(matchesList));
+                            }
+
+                            if (string.IsNullOrEmpty(errorText))
+                            {
+                                status += "Successfully downloaded image!\n";
+                                txtBlockData.Text += $"Successfully downloaded image!\nCheck folder: {Utilities.GetMainDownloadDirectory()}";
+                            }
+                            else
+                            {
+                                status += errorText;
+                                txtBlockData.Text += $"{errorText} Check logs for more info!";
+                            }
                         }
-                        txtBlockData.Text = status;
+                        else
+                        {
+                            txtBlockData.Text += "Failed to download image! Check log for more info!";
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -73,7 +97,7 @@ namespace MikuDownloader
                             status += String.Format("Failed to download image!\n{0}\n", ex.Message);
                         }
                         
-                        txtBlockData.Text = status;
+                        txtBlockData.Text += "Failed to download image! Check log for more info!";
                     }
                     finally
                     {
@@ -87,7 +111,7 @@ namespace MikuDownloader
             }
             else
             {
-                txtBlockData.Text = "No URL!";
+                txtBlockData.Text = "No URL inputted!";
             }
             
             ReleaseAllButtons();
@@ -98,7 +122,7 @@ namespace MikuDownloader
         {
             BlockAllButtons();
 
-            txtBlockData.Text = "Downloading...";
+            txtBlockData.Text = "Checking for matching images...\n";
             string filename = Utilities.BrowseFile(Constants.ImagesFilter);
             string status = string.Empty;
 
@@ -109,31 +133,53 @@ namespace MikuDownloader
                     var responseTuple = await ImageHelper.GetResponseFromFile(filename);
 
                     var imageData = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
-                    List<ImageDetails> matchesList = imageData.MatchingImages;
 
-                    if (matchesList != null && matchesList.Count > 0)
+                    if (imageData != null)
                     {
-                        var res = Utilities.GetResolution(filename);
-                        bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
-                        bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
+                        List<ImageDetails> matchesList = imageData.MatchingImages;
 
-
-                        if (matchesList.First().Resolution.Equals(res) && ignoreResolution != true)
+                        if (matchesList != null && matchesList.Count > 0)
                         {
-                            status += "Image checked had same resolution! Image was not downloaded! If you want to download it anyway check the logs!\n";
+                            var res = Utilities.GetResolution(filename);
+                            bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
+                            bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
+                            string resToCheck = matchesList.First().Resolution;
+
+                            if (!Utilities.CheckIfBetterResolution(res, resToCheck) && ignoreResolution != true)
+                            {
+                                status += "Image checked had equal or better resolution! Image was not downloaded!\n";
+                                txtBlockData.Text += "Image checked had equal or better resolution! Image was not downloaded!\nIf you want to download it anyway check the logs for links!\n";
+                            }
+                            else
+                            {
+                                string oldFilename = String.Empty;
+                                if (keepFilenames == true)
+                                {
+                                    oldFilename = Path.GetFileNameWithoutExtension(filename);
+                                }
+                                txtBlockData.Text += "Image found! Attempting to download...\n";
+                                string errorText = string.Empty;
+
+                                await Task.Run(() => errorText = ImageHelper.DownloadBestImage(matchesList, oldFilename));
+
+
+                                if (string.IsNullOrEmpty(errorText))
+                                {
+                                    status += "Successfully downloaded image!\n";
+                                    txtBlockData.Text += $"Successfully downloaded image!\nCheck folder: {Utilities.GetMainDownloadDirectory()}";
+                                }
+                                else
+                                {
+                                    status += errorText;
+                                    txtBlockData.Text += $"{errorText} Check logs for more info!";
+                                }
+                            }
                         }
                         else
                         {
-                            string oldFilename = String.Empty;
-                            if(keepFilenames == true)
-                            {
-                                oldFilename = Path.GetFileNameWithoutExtension(filename);
-                            }
-                            ImageHelper.DownloadBestImage(matchesList, oldFilename);
-                            status += "Successfully downoaded image!\n";
+                            txtBlockData.Text += "Failed to download image! Check log for more info!";
                         }
                     }
-                    txtBlockData.Text = status;
                 }
                 catch (Exception ex)
                 {
@@ -146,7 +192,7 @@ namespace MikuDownloader
                         status += String.Format("Failed to download image!\n{0}\n", ex.Message);
                     }
 
-                    txtBlockData.Text = status;
+                    txtBlockData.Text += "Failed to download image! Check log for more info!";
                 }
                 finally
                 {
@@ -157,14 +203,15 @@ namespace MikuDownloader
             {
                 txtBlockData.Text = "No file selected!";
             }
+
             ReleaseAllButtons();
         }
-
+        
         // downloads IMGUR post links (will fix later) from selected teext file
         private async void btnDownloadFromList_Click(object sender, RoutedEventArgs e)
         {
             BlockAllButtons();
-
+            string currStatus = string.Empty;
             string filepath = Utilities.BrowseFile(Constants.TextFilter);
 
             if (!string.IsNullOrEmpty(filepath))
@@ -183,11 +230,74 @@ namespace MikuDownloader
                             finalUrls.Add(url);
                         }
                     }
-                    txtBlockData.Text = "Downloading images...";
 
-                    await ImageHelper.DownloadBulkImages(finalUrls);
+                    int currPic = 0;
+                    int lastPic = finalUrls.Count;
+                    int downloadedCount = 0;
+                    int failedCount = 0;
+                    int notFoundCount = 0;
 
-                    txtBlockData.Text = "Finished downloading images! Check log for more info!";
+                    foreach (string imageURL in finalUrls)
+                    {
+                        currStatus = $"Successful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
+                        currPic++;
+                        string status = string.Empty;
+                        txtBlockData.Text = $"{currStatus}\nChecking image {currPic} of {lastPic}...\n";
+
+                        try
+                        {
+                            var responseTuple = await ImageHelper.GetResponseFromURL(imageURL);
+
+                            var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+
+                            if (imageList != null && imageList.MatchingImages.Count > 0)
+                            {
+                                List<ImageDetails> matchesList = imageList.MatchingImages;
+
+                                string errorText = string.Empty;
+
+                                txtBlockData.Text += "Image found! Attempting to download...\n";
+                                
+                                await Task.Run(() => errorText = ImageHelper.DownloadBestImage(matchesList));
+
+                                if (string.IsNullOrEmpty(errorText))
+                                {
+                                    status += "Successfully downloaded image!\n";
+                                    txtBlockData.Text += $"Successfully downloaded image!\n";
+                                    downloadedCount++;
+                                }
+                                else
+                                {
+                                    status += errorText;
+                                    txtBlockData.Text += $"{errorText} Check logs for more info!";
+                                    failedCount++;
+                                }
+                            }
+                            else
+                            {
+                                txtBlockData.Text += $"No matches found for {Path.GetFileName(imageURL)}!";
+                                notFoundCount++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            failedCount++;
+                            if (ex.InnerException != null)
+                            {
+                                status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                            }
+                            else
+                            {
+                                status += String.Format("Failed to download image!\n{0}\n", ex.Message);
+                            }
+                        }
+                        finally
+                        {
+                            File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
+                        }
+                    }
+                    currStatus = $"Successful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
+                    txtBlockData.Text = $"Finished checking image list! Check log for more info!\n{currStatus}";
                 }
                 else
                 {
@@ -219,7 +329,7 @@ namespace MikuDownloader
                     bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
                     bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
                     
-                    await ImageHelper.DownloadBulkImagesFromFolder(images, keepFilenames, ignoreResolution);
+                    await DownloadBulkImagesFromFolder(images, keepFilenames, ignoreResolution);
 
                     txtBlockData.Text = "Finished downloading images! Check log for more info!";
                 }
@@ -234,6 +344,87 @@ namespace MikuDownloader
             }
 
             ReleaseAllButtons();
+        }
+
+        // reads a folder for images and checks them
+        public async static Task<string> DownloadBulkImagesFromFolder(List<string> imagesToDownload, bool? keepFilenames = true, bool? ignoreResolution = false)
+        {
+            string secondaryLog = String.Format("Begin checking of files for folder: {0}\n", Path.GetDirectoryName(imagesToDownload.First()));
+            string totalDownloadedImages = string.Empty;
+
+            foreach (string file in imagesToDownload)
+            {
+                string status = string.Empty;
+                secondaryLog += String.Format("Checking image for: {0}\n", Path.GetFileName(file));
+
+                if (Utilities.IsImage(file))
+                {
+                    try
+                    {
+                        var responseTuple = await ImageHelper.GetResponseFromFile(file);
+
+                        var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
+                        List<ImageDetails> matchingImages = imageList.MatchingImages;
+
+                        if (matchingImages != null && matchingImages.Count > 0)
+                        {
+                            string fileResolution = Utilities.GetResolution(file);
+                            string matchResolution = matchingImages.First().Resolution;
+
+                            if (Utilities.CheckIfBetterResolution(fileResolution, matchResolution) || ignoreResolution == true)
+                            {
+                                string origImageName;
+                                if (keepFilenames == true)
+                                {
+                                    origImageName = Path.GetFileNameWithoutExtension(file);
+                                }
+                                else
+                                {
+                                    origImageName = String.Empty;
+                                }
+                                ImageHelper.DownloadBestImage(matchingImages, origImageName);
+                                status += "Successfully downloaded image!\n";
+                                secondaryLog += String.Format("Image with better resolution was found or resolution is being ignored!\nOriginal res: {0} - new res: {1}\n", fileResolution, matchResolution);
+                                totalDownloadedImages += Path.GetFileName(file) + "\n";
+                            }
+                            else
+                            {
+                                status += "Image in folder has same resolution! Image was not downloaded!\n";
+                                secondaryLog += "Image in folder has same resolution!\n";
+                            }
+                            Thread.Sleep(1000); //anti-ban
+                        }
+                        else
+                        {
+                            secondaryLog += "No matches were found for the image!\n";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.InnerException != null)
+                        {
+                            status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                        }
+                        else
+                        {
+                            status += String.Format("Failed to download image!\n{0}\n", ex.Message);
+                        }
+                        secondaryLog += "Something went wrong when downloading image!\n";
+                    }
+                    finally
+                    {
+                        File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
+                    }
+                }
+                else
+                {
+                    secondaryLog += String.Format("File: {0} is not an image file and was not checked!\n", Path.GetFileName(file));
+                }
+                secondaryLog += Constants.VeryLongLine + "\n";
+            }
+            File.AppendAllText(Utilities.GetSecondaryLogFileName(), "All downloaded images:\n" + totalDownloadedImages + Constants.VeryLongLine + "\n" + secondaryLog);
+
+            return "Successfull!";
         }
 
         // downloads images from checked folder, reading from generated serialization XML
@@ -374,6 +565,11 @@ namespace MikuDownloader
             {
                 b.IsEnabled = true;
             }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("Button Clicked !");
         }
     }
 }

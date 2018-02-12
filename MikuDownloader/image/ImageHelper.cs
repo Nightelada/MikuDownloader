@@ -8,7 +8,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
 
 namespace MikuDownloader
 {
@@ -268,12 +267,20 @@ namespace MikuDownloader
         }
 
         // downloads best image from a set of sites provided
-        public static void DownloadBestImage(List<ImageDetails> images, string fileName = "")
+        public static string DownloadBestImage(List<ImageDetails> images, string fileName = "")
         {
             // somehow try to distinguish files with differences! (edge tracing)
             if (images != null && images.Count > 0)
             {
-                SavePriorityImages(images, fileName);
+                try
+                {
+                    SavePriorityImages(images, fileName);
+                    return string.Empty;
+                }
+                catch (Exception ex)
+                {
+                    return ex.Message;
+                }
             }
             else
             {
@@ -284,12 +291,12 @@ namespace MikuDownloader
         // save parsed images based on site priority
         private static void SavePriorityImages(List<ImageDetails> images, string fileName)
         {
-            var currTime = DateTime.Now.ToString("yyyyMMdd");
-            var folderPath = Path.Combine(Constants.MainDownloadDirectory, currTime.ToString());
+            var folderPath = Utilities.GetMainDownloadDirectory();
 
-            bool flagSuccessfullDownload = false;
+            bool flagSuccessfulDownload = false;
             int oldPriority = 1;
             bool status = false;
+            string errorMessages = string.Empty;
 
             images.Sort((x, y) => x.Priority.CompareTo(y.Priority));
 
@@ -305,7 +312,7 @@ namespace MikuDownloader
                 {
                     if (image.Priority > oldPriority)
                     {
-                        if (!flagSuccessfullDownload)
+                        if (!flagSuccessfulDownload)
                         {
                             oldPriority = image.Priority;
                         }
@@ -322,17 +329,17 @@ namespace MikuDownloader
                             imageUrl = Utilities.GetImageURL(image.PostURL, image.MatchSource, out status);
                             if (status)
                             {
-                                flagSuccessfullDownload = true;
+                                flagSuccessfulDownload = true;
                             }
                         }
                         else
                         {
-                            if (!flagSuccessfullDownload)
+                            if (!flagSuccessfulDownload)
                             {
                                 imageUrl = Utilities.GetImageURL(image.PostURL, image.MatchSource, out status);
                                 if (status)
                                 {
-                                    flagSuccessfullDownload = true;
+                                    flagSuccessfulDownload = true;
                                 }
                             }
                         }
@@ -347,134 +354,14 @@ namespace MikuDownloader
                 }
                 catch (Exception ex)
                 {
-                    throw new ArgumentException(ex.Message);
+                    errorMessages += ex.Message + "\n";
                 }
             }
 
-            if (!flagSuccessfullDownload)
+            if (!flagSuccessfulDownload)
             {
-                throw new ArgumentException("Someething went wrong when downloading the image!");
+                throw new ArgumentException($"Something went wrong when downloading the image! {errorMessages}");
             }
-        }
-
-        // reads URL links from a file and checks them
-        public async static Task<string> DownloadBulkImages(List<string> URLsToDownload)
-        {
-            foreach (string imageURL in URLsToDownload)
-            {
-                string status = string.Empty;
-
-                try
-                {
-                    var responseTuple = await GetResponseFromURL(imageURL);
-
-                    var imageList = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
-                    List<ImageDetails> matchingImages = imageList.MatchingImages;
-
-                    DownloadBestImage(matchingImages);
-                    status += "Successfully downoaded image!\n";
-
-                    Thread.Sleep(1000);
-                }
-                catch (Exception ex)
-                {
-                    if (ex.InnerException != null)
-                    {
-                        status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        status += String.Format("Failed to download image!\n{0}\n", ex.Message);
-                    }
-                }
-                finally
-                {
-                    File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
-                }
-            }
-
-            return "Successfull!";
-        }
-
-        // reads a folder for images and checks them
-        public async static Task<string> DownloadBulkImagesFromFolder(List<string> imagesToDownload, bool? keepFilenames = true, bool? ignoreResolution = false)
-        {
-            string secondaryLog = String.Format("Begin checking of files for folder: {0}\n", Path.GetDirectoryName(imagesToDownload.First()));
-            string totalDownloadedImages = string.Empty;
-
-            foreach (string file in imagesToDownload)
-            {
-                string status = string.Empty;
-                secondaryLog += String.Format("Checking image for: {0}\n", Path.GetFileName(file));
-
-                if (Utilities.IsImage(file))
-                {
-                    try
-                    {
-                        var responseTuple = await GetResponseFromFile(file);
-
-                        var imageList = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
-                        List<ImageDetails> matchingImages = imageList.MatchingImages;
-
-                        if (matchingImages != null && matchingImages.Count > 0)
-                        {
-                            string fileResolution = Utilities.GetResolution(file);
-                            string matchResolution = matchingImages.First().Resolution;
-
-                            if (Utilities.CheckIfBetterResolution(fileResolution,matchResolution) || ignoreResolution == true)
-                            {
-                                string origImageName;
-                                if (keepFilenames == true)
-                                {
-                                    origImageName = Path.GetFileNameWithoutExtension(file);
-                                }
-                                else
-                                {
-                                    origImageName = String.Empty;
-                                }
-                                DownloadBestImage(matchingImages, origImageName);
-                                status += "Successfully downoaded image!\n";
-                                secondaryLog += String.Format("Image with better resolution was found or resolution is being ignored!\nOriginal res: {0} - new res: {1}\n", fileResolution, matchResolution);
-                                totalDownloadedImages += Path.GetFileName(file) + "\n";
-                            }
-                            else
-                            {
-                                status += "Image in folder has same resolution! Image was not downloaded!\n";
-                                secondaryLog += "Image in folder has same resolution!\n";
-                            }
-                            Thread.Sleep(1000); //anti-ban
-                        }
-                        else
-                        {
-                            secondaryLog += "No matches were found for the image!\n";
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        if (ex.InnerException != null)
-                        {
-                            status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
-                        }
-                        else
-                        {
-                            status += String.Format("Failed to download image!\n{0}\n", ex.Message);
-                        }
-                        secondaryLog += "Something went wrong when downloading image!\n";
-                    }
-                    finally
-                    {
-                        File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
-                    }
-                }
-                else
-                {
-                    secondaryLog += String.Format("File: {0} is not an image file and was not checked!\n", Path.GetFileName(file));
-                }
-                secondaryLog += Constants.VeryLongLine + "\n";
-            }
-            File.AppendAllText(Utilities.GetSecondaryLogFileName(), "All downloaded images:\n" + totalDownloadedImages + Constants.VeryLongLine + "\n" + secondaryLog);
-
-            return "Successfull!";
         }
 
         // reads image links from folder and check for duplicates and find better resolutions

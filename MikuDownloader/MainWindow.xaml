@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
         xmlns:local="clr-namespace:MikuDownloader"
         mc:Ignorable="d"
         Title="MikuDownloader" Height="350" Width="729" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" MinWidth="673" MinHeight="350">
@@ -32,5 +33,12 @@
         <CheckBox x:Name="chkBoxKeepFilenames" Content="Keep filenames" HorizontalAlignment="Left" Margin="170,265,0,0" VerticalAlignment="Top"/>
         <Button x:Name="btnDeserializeFolder" Content="Download From XML" HorizontalAlignment="Left" Margin="179,189,0,0" VerticalAlignment="Top" Width="117" Click="btnDeserializeFolder_Click"/>
         <Button x:Name="btnCheckFolder" Content="Check Folder" HorizontalAlignment="Left" Margin="23,189,0,0" VerticalAlignment="Top" Width="133" Click="btnCheckFolder_Click"/>
+        <Button Content="Button" Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Left" Margin="598,208,0,0" VerticalAlignment="Top" Width="103" Click="Button_Click" Height="80">
+            <Button.Template>
+                <ControlTemplate>
+                    <Image gif:AnimationBehavior.SourceUri="/Resources/test.gif"/>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
     </Grid>
 </Window>

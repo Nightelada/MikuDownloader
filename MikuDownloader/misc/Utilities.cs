@@ -6,6 +6,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 
 namespace MikuDownloader.misc
@@ -38,6 +39,14 @@ namespace MikuDownloader.misc
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             return currTime + "_" + Constants.DuplicatesLogFileName;
+        }
+
+        public static string GetMainDownloadDirectory()
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd");
+            var downloadDir = Path.Combine(Constants.MainDownloadDirectory, currTime);
+
+            return downloadDir;
         }
 
         // browses for .txt file and returns full path
