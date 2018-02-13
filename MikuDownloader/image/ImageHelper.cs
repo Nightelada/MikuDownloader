@@ -324,23 +324,16 @@ namespace MikuDownloader
 
                     if (oldPriority == image.Priority)
                     {
-                        if (image.Priority <= 3)
+                        if (image.Priority <= 3 || !flagSuccessfulDownload)
                         {
                             imageUrl = Utilities.GetImageURL(image.PostURL, image.MatchSource, out status);
                             if (status)
                             {
                                 flagSuccessfulDownload = true;
                             }
-                        }
-                        else
-                        {
-                            if (!flagSuccessfulDownload)
+                            else
                             {
-                                imageUrl = Utilities.GetImageURL(image.PostURL, image.MatchSource, out status);
-                                if (status)
-                                {
-                                    flagSuccessfulDownload = true;
-                                }
+                                errorMessages += imageUrl;
                             }
                         }
                     }
@@ -350,7 +343,7 @@ namespace MikuDownloader
                         Utilities.SaveImage(folderPath, imageUrl, fileName);
                     }
                     // anti-ban
-                    Thread.Sleep(1000);
+                    Task.Delay(500);
                 }
                 catch (Exception ex)
                 {
@@ -360,57 +353,12 @@ namespace MikuDownloader
 
             if (!flagSuccessfulDownload)
             {
-                throw new ArgumentException($"Something went wrong when downloading the image! {errorMessages}");
+                throw new ArgumentException($"Something went wrong when downloading the image!\n{errorMessages}");
             }
-        }
-
-        // reads image links from folder and check for duplicates and find better resolutions
-        public async static Task<string> CheckFolderFull(List<string> imagesToCheck, bool? ignoreResolution)
-        {
-            List<ImageData> imagesToCheckForDuplicates = new List<ImageData>();
-
-            string log = string.Empty;
-            string status = string.Empty;
-
-            foreach (string file in imagesToCheck)
-            {
-
-                if (Utilities.IsImage(file))
-                {
-                    try
-                    {
-                        var responseTuple = await GetResponseFromFile(file);
-
-                        var imageData = ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
-                        List<ImageDetails> matchingImages = imageData.MatchingImages;
-
-                        if (matchingImages != null && matchingImages.Count > 0)
-                        {
-                            string fileResolution = Utilities.GetResolution(file);
-                            string matchResolution = matchingImages.First().Resolution;
-
-                            if (Utilities.CheckIfBetterResolution(fileResolution, matchResolution))
-                            {
-                                imageData.HasBetterResolution = true;
-                            }
-
-                            imagesToCheckForDuplicates.Add(imageData);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        log += string.Format("{0}\n{1}\n", status, ex.Message);
-                    }
-                }
-            }
-
-            log = MarkDuplicateImages(imagesToCheckForDuplicates);
-            
-            return log;
         }
 
         // sorts duplicate files to different folder
-        private static string MarkDuplicateImages(List<ImageData> images)
+        public static string MarkDuplicateImages(List<ImageData> images)
         {
             string logger = string.Empty;
             List<ImageData> imagesWithBetterResolution = new List<ImageData>();
@@ -580,48 +528,6 @@ namespace MikuDownloader
                 }
             }
         }
-
-        // downloads images from serialized XML files
-        public static void DownloadSerializedImages(List<ImageData> imagesToDownload)
-        {
-            string listOfNotDownloadedImages = string.Empty;
-            string status = string.Empty;
-
-            foreach (ImageData imageContainer in imagesToDownload)
-            {
-                try
-                {
-                    DownloadBestImage(imageContainer.MatchingImages);
-                    Thread.Sleep(1000); //anti-ban
-                }
-                catch (Exception ex)
-                {
-                    status += imageContainer.OriginalImage + "\n";
-                    listOfNotDownloadedImages += imageContainer.OriginalImage + "\n";
-
-                    if (ex.InnerException != null)
-                    {
-                        status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        status += String.Format("Failed to download image!\n{0}\n", ex.Message);
-                    }
-                }
-                finally
-                {
-                    if (string.IsNullOrEmpty(status))
-                    {
-                        status += Constants.VeryLongLine + "\n";
-                        File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
-                    }
-                }
-            }
-
-            if (!string.IsNullOrEmpty(status))
-            {
-                File.AppendAllText("images-not-downloaded.txt", "Images not downloaded:\n" + listOfNotDownloadedImages + Constants.VeryLongLine + status + Constants.VeryLongLine + "\n");
-            }
-        }
+        
     }
 }

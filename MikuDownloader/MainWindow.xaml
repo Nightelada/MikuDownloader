@@ -33,7 +33,7 @@
         <CheckBox x:Name="chkBoxKeepFilenames" Content="Keep filenames" HorizontalAlignment="Left" Margin="170,265,0,0" VerticalAlignment="Top"/>
         <Button x:Name="btnDeserializeFolder" Content="Download From XML" HorizontalAlignment="Left" Margin="179,189,0,0" VerticalAlignment="Top" Width="117" Click="btnDeserializeFolder_Click"/>
         <Button x:Name="btnCheckFolder" Content="Check Folder" HorizontalAlignment="Left" Margin="23,189,0,0" VerticalAlignment="Top" Width="133" Click="btnCheckFolder_Click"/>
-        <Button Content="Button" Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Left" Margin="598,208,0,0" VerticalAlignment="Top" Width="103" Click="Button_Click" Height="80">
+        <Button Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Left" Margin="550,162,0,0" VerticalAlignment="Top" Width="150" Height="125">
             <Button.Template>
                 <ControlTemplate>
                     <Image gif:AnimationBehavior.SourceUri="/Resources/test.gif"/>

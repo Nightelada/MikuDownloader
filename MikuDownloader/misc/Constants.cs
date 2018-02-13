@@ -38,6 +38,7 @@
         public static string RecommendationsLogFileName = "recommendations-log.txt";
         public static string DuplicatesLogFileName = "duplicates-log.txt";
         public static string DuplicatesDirectory = "duplicates";
+        public static string NotDownloadedFilename = "not-downloaded-log.txt";
         public static string BadDuplicatesDirectory = "bad-duplicates";
         public static string BetterResolutionFilename = "for-download-images.xml";
         public static string BetterResolutionDirectory = "for-download";
