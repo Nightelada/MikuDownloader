@@ -5,11 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using XamlAnimatedGif;
 
 namespace MikuDownloader
 {
@@ -251,7 +249,7 @@ namespace MikuDownloader
         }
 
         // checks a list of Image URLs
-        public async Task DownloadFromList(List<string> finalUrls)
+        private async Task DownloadFromList(List<string> finalUrls)
         {
             string currStatus = string.Empty;
             int currPic = 0;
@@ -373,7 +371,7 @@ namespace MikuDownloader
         }
 
         // checks a list of files
-        public async Task DownloadFromFolder(List<string> imagesToDownload, bool? keepFilenames = true, bool? ignoreResolution = false)
+        private async Task DownloadFromFolder(List<string> imagesToDownload, bool? keepFilenames = true, bool? ignoreResolution = false)
         {
             string secondaryLog = String.Format("Begin checking of files for folder: {0}\n", Path.GetDirectoryName(imagesToDownload.First()));
 
@@ -522,14 +520,18 @@ namespace MikuDownloader
 
                     var watch = Stopwatch.StartNew();
 
-                    logger += await CheckFolderFull(images);
+                    string checkLog = await CheckFolderFull(images);
+                    logger += checkLog;
 
                     watch.Stop();
                     var elapsedMs = watch.ElapsedMilliseconds;
 
                     logger += string.Format("Total time to write logfile and move images: {0} seconds\n", elapsedMs / 1000.0);
 
-                    File.AppendAllText(Utilities.GetDuplicatesLogFileName(), logger);
+                    if (!string.IsNullOrEmpty(checkLog))
+                    {
+                        File.AppendAllText(Utilities.GetDuplicatesLogFileName(), logger);
+                    }
                 }
                 else
                 {
@@ -545,24 +547,24 @@ namespace MikuDownloader
         }
 
         // checks a folder for duplicates and find better resolutions
-        public async Task<string> CheckFolderFull(List<string> imagesToCheck)
+        private async Task<string> CheckFolderFull(List<string> imagesToCheck)
         {
             List<ImageData> imagesToCheckForDuplicates = new List<ImageData>();
 
             string log = string.Empty;
             string status = string.Empty;
+            string errorLog = string.Empty;
 
             string currStatus = string.Empty;
             int currFile = 0;
             int lastFile = imagesToCheck.Count;
             int foundCount = 0;
             int notFoundCount = 0;
-            int isNotImageCount = 0;
             int noBetterResFoundCount = 0;
 
             foreach (string file in imagesToCheck)
             {
-                currStatus = $"Better resolution found: {foundCount}\nNo better resolution: {noBetterResFoundCount}\nNo matches found: {notFoundCount}\nNot images: {isNotImageCount}";
+                currStatus = $"Better resolution found: {foundCount}\nNo better resolution: {noBetterResFoundCount}\nNo matches found: {notFoundCount}\n";
                 currFile++;
 
                 txtBlockData.Text = $"{currStatus}\nChecking file {currFile} of {lastFile}...\n";
@@ -600,18 +602,41 @@ namespace MikuDownloader
                     }
                     catch (Exception ex)
                     {
-                        log += $"{status}\n{ex.Message}\n";
+                        notFoundCount++;
+                        errorLog += $"{status}\n{ex.Message}\n";
                     }
                 }
-                else
-                {
-                    isNotImageCount++;
-                }
             }
-            currStatus = $"Better resolution found: {foundCount}\nNo better resolution: {noBetterResFoundCount}\nNo matches found: {notFoundCount}\nNot images: {isNotImageCount}";
+       
+            log = ImageHelper.MarkDuplicateImages(imagesToCheckForDuplicates);
+            int duplicatesCount = imagesToCheckForDuplicates.Count(x => x.Duplicate == true);
+
+            currStatus = $"Better resolution found: {foundCount}\nNo better resolution: {noBetterResFoundCount}\nNo matches found: {notFoundCount}\nPossible duplicates: {duplicatesCount}";
+            if (foundCount > 0)
+            {
+                currStatus += "\nImages have been sorted into corresponding folders and an XML file containing images with better resolution was saved where program was executed";
+            }
+            else
+            {
+                currStatus += "\nImages have been sorted into corresponding folders";
+            }
+
+            if (duplicatesCount > 0)
+            {
+                log = $"Duplicates:\n{log}";
+            }
+            else
+            {
+                log = string.Empty;
+            }
+
             txtBlockData.Text = $"Finished checking folder! Check log for more info!\n{currStatus}";
 
-            log = ImageHelper.MarkDuplicateImages(imagesToCheckForDuplicates);
+            if (!string.IsNullOrEmpty(errorLog))
+            {
+                log = $"Errors:\n{errorLog}\n{log}";
+            }
+
             return log;
         }
 
@@ -647,7 +672,7 @@ namespace MikuDownloader
         }
 
         // downloads images from serialized XML files
-        public async Task DownloadSerializedImages(List<ImageData> imagesToDownload)
+        private async Task DownloadSerializedImages(List<ImageData> imagesToDownload)
         {
             string currStatus = string.Empty;
             string listOfNotDownloadedImages = string.Empty;
@@ -754,6 +779,18 @@ namespace MikuDownloader
         private void menuClose_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void menuCheckFolder_Click(object sender, RoutedEventArgs e)
+        {
+            HelpWindow tempHelpWindow = new HelpWindow(Constants.CheckFolderHelpText);
+            tempHelpWindow.Show();
+        }
+
+        private void menuXML_Click(object sender, RoutedEventArgs e)
+        {
+            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromXMLHelpText);
+            tempHelpWindow.Show();
         }
 
         private void BlockAllButtons()

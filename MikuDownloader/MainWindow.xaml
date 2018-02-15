@@ -15,10 +15,12 @@
                     <MenuItem x:Name="menuClose" Header="Exit" Click="menuClose_Click"/>
                 </MenuItem>
                 <MenuItem Header="Help">
-                    <MenuItem x:Name="menuFromFile" Header="From File" Click="menuFromFile_Click"/>
                     <MenuItem x:Name="menuFromURL" Header="From URL" Click="menuFromURL_Click"/>
-                    <MenuItem x:Name="menuFromList" Header="From List" Click="menuFromList_Click"/>
-                    <MenuItem x:Name="menuFromFolder" Header="From Folder" Click="menuFromFolder_Click"/>
+                    <MenuItem x:Name="menuFromList" Header="Download From List" Click="menuFromList_Click"/>
+                    <MenuItem x:Name="menuCheckFolder" Header="Check Folder" Click="menuCheckFolder_Click"/>
+                    <MenuItem x:Name="menuXML" Header="Download from XML" Click="menuXML_Click"/>
+                    <MenuItem x:Name="menuFromFile" Header="From File" Click="menuFromFile_Click"/>
+                    <MenuItem x:Name="menuFromFolder" Header="Download from Folder" Click="menuFromFolder_Click"/>
                 </MenuItem>
             </Menu>
         </DockPanel>
