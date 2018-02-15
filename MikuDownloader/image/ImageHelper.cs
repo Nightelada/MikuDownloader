@@ -528,6 +528,5 @@ namespace MikuDownloader
                 }
             }
         }
-        
     }
 }

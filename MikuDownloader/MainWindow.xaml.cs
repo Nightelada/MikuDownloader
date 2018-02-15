@@ -576,24 +576,31 @@ namespace MikuDownloader
                         var responseTuple = await ImageHelper.GetResponseFromFile(file);
 
                         var imageData = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
-                        List<ImageDetails> matchingImages = imageData.MatchingImages;
-
-                        if (matchingImages != null && matchingImages.Count > 0)
+                        if (imageData != null)
                         {
-                            string fileResolution = Utilities.GetResolution(file);
-                            string matchResolution = matchingImages.First().Resolution;
+                            List<ImageDetails> matchingImages = imageData.MatchingImages;
 
-                            if (Utilities.CheckIfBetterResolution(fileResolution, matchResolution))
+                            if (matchingImages != null && matchingImages.Count > 0)
                             {
-                                imageData.HasBetterResolution = true;
-                                foundCount++;
+                                string fileResolution = Utilities.GetResolution(file);
+                                string matchResolution = matchingImages.First().Resolution;
+
+                                if (Utilities.CheckIfBetterResolution(fileResolution, matchResolution))
+                                {
+                                    imageData.HasBetterResolution = true;
+                                    foundCount++;
+                                }
+                                else
+                                {
+                                    noBetterResFoundCount++;
+                                }
+
+                                imagesToCheckForDuplicates.Add(imageData);
                             }
                             else
                             {
-                                noBetterResFoundCount++;
+                                notFoundCount++;
                             }
-
-                            imagesToCheckForDuplicates.Add(imageData);
                         }
                         else
                         {
