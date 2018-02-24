@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using Microsoft.Win32;
+using Ookii.Dialogs.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Drawing.Imaging;
@@ -83,17 +84,13 @@ namespace MikuDownloader.misc
         {
             string directory = string.Empty;
 
-            OpenFileDialog dlg = new OpenFileDialog()
-            {
-                AddExtension = true,
-                Filter = filter
-            };
+            VistaFolderBrowserDialog dlg = new VistaFolderBrowserDialog();
 
             bool? result = dlg.ShowDialog();
 
             if (result == true)
             {
-                directory = Path.GetDirectoryName(dlg.FileName);
+                directory = dlg.SelectedPath;
             }
 
             return directory;

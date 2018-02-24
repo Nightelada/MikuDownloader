@@ -17,18 +17,24 @@ namespace MikuDownloader
     public partial class MainWindow : Window
     {
         private List<Button> buttonsList;
+        private List<CheckBox> checkBoxesList;
 
         public MainWindow()
         {
             InitializeComponent();
             buttonsList = new List<Button>()
             {
-                btnDownloadFromFolder,
                 btnDownloadFromList,
                 btnDownloadFromFile,
                 btnDownloadFromURL,
                 btnCheckFolder,
                 btnDeserializeFolder
+            };
+            checkBoxesList = new List<CheckBox>()
+            {
+                chkBoxAutoDownload,
+                chkBoxIgnoreResolution,
+                chkBoxKeepFilenames
             };
         }
 
@@ -339,169 +345,6 @@ namespace MikuDownloader
             }
         }
 
-        // reads a folder for images and checks them
-        private async void btnDownloadFromFolder_Click(object sender, RoutedEventArgs e)
-        {
-            BlockAllButtons();
-
-            string folderPath = Utilities.BrowseDirectory(Constants.ImagesFilter);
-
-            if (!string.IsNullOrEmpty(folderPath))
-            {
-                List<string> images = Directory.GetFiles(folderPath).ToList();
-
-                if (images != null && images.Count > 0)
-                {
-                    bool? keepFilenames = chkBoxKeepFilenames.IsChecked;
-                    bool? ignoreResolution = chkBoxIgnoreResolution.IsChecked;
-
-                    await DownloadFromFolder(images, keepFilenames, ignoreResolution);
-                }
-                else
-                {
-                    MessageBox.Show("No images found in text file!", "Error");
-                }
-            }
-            else
-            {
-                MessageBox.Show("No file was selected!", "Error");
-            }
-
-            ReleaseAllButtons();
-        }
-
-        // checks a list of files
-        private async Task DownloadFromFolder(List<string> imagesToDownload, bool? keepFilenames = true, bool? ignoreResolution = false)
-        {
-            string secondaryLog = String.Format("Begin checking of files for folder: {0}\n", Path.GetDirectoryName(imagesToDownload.First()));
-
-            string currStatus = string.Empty;
-            int currFile = 0;
-            int lastFile = imagesToDownload.Count;
-            int downloadedCount = 0;
-            int failedCount = 0;
-            int notFoundCount = 0;
-            int isNotImageCount = 0;
-            int noBetterResFoundCount = 0;
-            string noMatchesImages = "Pictures with no relative matches found:\n";
-            string failedToDownloadImages = "Pictures that failed to download:\n";
-            
-            foreach (string file in imagesToDownload)
-            {
-                currStatus = $"Successful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}\nNot image files: {isNotImageCount}\nImages with good resolution: {noBetterResFoundCount}";
-                currFile++;
-
-                string status = string.Empty;
-                secondaryLog += String.Format("Checking image for: {0}\n", Path.GetFileName(file));
-                txtBlockData.Text = $"{currStatus}\nChecking file {currFile} of {lastFile}...\n";
-
-                if (Utilities.IsImage(file))
-                {
-                    try
-                    {
-                        var responseTuple = await ImageHelper.GetResponseFromFile(file);
-
-                        var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, out status);
-                        List<ImageDetails> matchingImages = imageList.MatchingImages;
-
-                        if (matchingImages != null && matchingImages.Count > 0)
-                        {
-                            string fileResolution = Utilities.GetResolution(file);
-                            string matchResolution = matchingImages.First().Resolution;
-
-                            if (Utilities.CheckIfBetterResolution(fileResolution, matchResolution) || ignoreResolution == true)
-                            {
-                                string origImageName;
-                                if (keepFilenames == true)
-                                {
-                                    origImageName = Path.GetFileNameWithoutExtension(file);
-                                }
-                                else
-                                {
-                                    origImageName = String.Empty;
-                                }
-
-                                string errorText = string.Empty;
-                                txtBlockData.Text += "Image found! Attempting to download...\n";
-
-                                await Task.Run(() => errorText = ImageHelper.DownloadBestImage(matchingImages, origImageName));
-
-
-                                if (string.IsNullOrEmpty(errorText))
-                                {
-                                    status += "Successfully downloaded image!\n";
-                                    secondaryLog += String.Format("Image with better resolution was found or resolution is being ignored!\nOriginal res: {0} - new res: {1}\n", fileResolution, matchResolution);
-                                    txtBlockData.Text += $"Successfully downloaded image!\n";
-                                    downloadedCount++;
-                                }
-                                else
-                                {
-                                    status += errorText + "\n";
-                                    secondaryLog += errorText + "\n";
-                                    txtBlockData.Text += $"{errorText} Check logs for more info!";
-                                    failedCount++;
-                                    failedToDownloadImages += file + "\n";
-                                }
-                            }
-                            else
-                            {
-                                noBetterResFoundCount++;
-                                status += "Image in folder has same resolution! Image was not downloaded!\n";
-                                secondaryLog += "Image in folder has same resolution!\n";
-                            }
-                        }
-                        else
-                        {
-                            notFoundCount++;
-                            noMatchesImages += file + "\n";
-                            secondaryLog += "No matches were found for the image!\n";
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        failedCount++;
-                        failedToDownloadImages += file + "\n";
-
-                        if (ex.InnerException != null)
-                        {
-                            status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
-                        }
-                        else
-                        {
-                            status += String.Format("Failed to download image!\n{0}\n", ex.Message);
-                        }
-                        secondaryLog += "Something went wrong when downloading image!\n";
-                    }
-                    finally
-                    {
-                        File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
-                    }
-                }
-                else
-                {
-                    isNotImageCount++;
-                    secondaryLog += String.Format("File: {0} is not an image file and was not checked!\n", Path.GetFileName(file));
-                }
-                secondaryLog += Constants.VeryLongLine + "\n";
-            }
-            currStatus = $"Successful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}\nNot image files: {isNotImageCount}\nImages with good resolution: {noBetterResFoundCount}";
-            txtBlockData.Text = $"Finished checking folder! Check log for more info!\n{currStatus}";
-            if (failedCount > 0 || notFoundCount > 0)
-            {
-                string failsString = string.Empty;
-                if (failedCount > 0)
-                {
-                    failsString += failedToDownloadImages;
-                }
-                if (notFoundCount > 0)
-                {
-                    failsString += noMatchesImages;
-                }
-                File.AppendAllText(Utilities.GetNotDownloadedFilename(), failsString);
-            }
-            File.AppendAllText(Utilities.GetSecondaryLogFileName(), secondaryLog + "\n" + currStatus +"\n" + Constants.VeryLongLine);
-        }
-
         // checks folder for images that have duplicates or better resolution
         private async void btnCheckFolder_Click(object sender, RoutedEventArgs e)
         {
@@ -520,7 +363,8 @@ namespace MikuDownloader
 
                     var watch = Stopwatch.StartNew();
 
-                    string checkLog = await CheckFolderFull(images);
+                    bool? autoDownload = chkBoxAutoDownload.IsChecked;
+                    string checkLog = await CheckFolderFull(images, autoDownload);
                     logger += checkLog;
 
                     watch.Stop();
@@ -540,14 +384,14 @@ namespace MikuDownloader
             }
             else
             {
-                MessageBox.Show("No file was selected!", "Error");
+                MessageBox.Show("No folder was selected!", "Error");
             }
 
             ReleaseAllButtons();
         }
 
         // checks a folder for duplicates and find better resolutions
-        private async Task<string> CheckFolderFull(List<string> imagesToCheck)
+        private async Task<string> CheckFolderFull(List<string> imagesToCheck, bool? autoDownload)
         {
             List<ImageData> imagesToCheckForDuplicates = new List<ImageData>();
 
@@ -615,11 +459,24 @@ namespace MikuDownloader
                 }
             }
        
-            log = ImageHelper.MarkDuplicateImages(imagesToCheckForDuplicates);
+            log = ImageHelper.MarkDuplicateImages(imagesToCheckForDuplicates, out string serializedImages);
+            if (!string.IsNullOrEmpty(serializedImages))
+            {
+                if (autoDownload == true)
+                {
+                    List<ImageData> images = SerializingHelper.DeserializeImageList(serializedImages);
+                    await DownloadSerializedImages(images);
+                }
+                else
+                {
+                    string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.BetterResolutionFilename);
+                    File.WriteAllText(fileName, serializedImages);
+                }
+            }
             int duplicatesCount = imagesToCheckForDuplicates.Count(x => x.Duplicate == true);
 
             currStatus = $"Better resolution found: {foundCount}\nNo better resolution: {noBetterResFoundCount}\nNo matches found: {notFoundCount}\nPossible duplicates: {duplicatesCount}";
-            if (foundCount > 0)
+            if (foundCount > 0 && autoDownload != true)
             {
                 currStatus += "\nImages have been sorted into corresponding folders and an XML file containing images with better resolution was saved where program was executed";
             }
@@ -777,12 +634,6 @@ namespace MikuDownloader
             tempHelpWindow.Show();
         }
 
-        private void menuFromFolder_Click(object sender, RoutedEventArgs e)
-        {
-            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromFolderHelpText);
-            tempHelpWindow.Show();
-        }
-
         private void menuClose_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -806,6 +657,10 @@ namespace MikuDownloader
             {
                 b.IsEnabled = false;
             }
+            foreach (CheckBox c in checkBoxesList)
+            {
+                c.IsEnabled = false;
+            }
         }
 
         private void ReleaseAllButtons()
@@ -813,6 +668,10 @@ namespace MikuDownloader
             foreach (Button b in buttonsList)
             {
                 b.IsEnabled = true;
+            }
+            foreach (CheckBox c in checkBoxesList)
+            {
+                c.IsEnabled = true;
             }
         }
     }

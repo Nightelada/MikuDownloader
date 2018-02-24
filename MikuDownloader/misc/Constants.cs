@@ -39,7 +39,6 @@
         public static string DuplicatesLogFileName = "duplicates-log.txt";
         public static string DuplicatesDirectory = "duplicates";
         public static string NotDownloadedFilename = "not-downloaded-log.txt";
-        public static string BadDuplicatesDirectory = "bad-duplicates";
         public static string BetterResolutionFilename = "for-download-images.xml";
         public static string BetterResolutionDirectory = "for-download";
         public static string GoodResolutionDirectory = "good-resolution";
@@ -62,12 +61,6 @@
            "\nClick Download from list button" +
            "\nImages will be automatically downloaded if found" +
            "\nAfter images are downloaded you can view them in the download directory";
-
-        public static string FromFolderHelpText = "Downloading image from folder:\n\nSelect a folder containing image files (.jpg, .png, .gif) from the opened explorer menu" +
-            "\nYou can choose to keep the original filenames (to replace them easier after download)" +
-            "\nand you can also choose to download images even if duplicate resolutions are found" +
-            "\nImages will be automatically downloaded if found" +
-            "\nAfter images are downloaded you can view them in the download directory";
 
         public static string CheckFolderHelpText = "Checking folder for duplicates and images with better resolution:\n" +
             "\nSelect a folder containing image files (.jpg, .png, .gif) from the opened explorer menu" +

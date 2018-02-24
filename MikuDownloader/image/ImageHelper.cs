@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MikuDownloader
@@ -358,7 +357,7 @@ namespace MikuDownloader
         }
 
         // sorts duplicate files to different folder
-        public static string MarkDuplicateImages(List<ImageData> images)
+        public static string MarkDuplicateImages(List<ImageData> images, out string serializedImages)
         {
             string logger = string.Empty;
             List<ImageData> imagesWithBetterResolution = new List<ImageData>();
@@ -411,53 +410,61 @@ namespace MikuDownloader
 
             List<ImageData> sortedDuplicates = finalDuplicates.OrderBy(x => x.DuplicateIndex).ToList();
 
-            foreach (ImageData image in sortedDuplicates)
+            if (sortedDuplicates != null && sortedDuplicates.Count > 0)
             {
-                string originalFile = image.OriginalImage;
-                string folderPath = Path.GetDirectoryName(originalFile);
+                int prevIndex = sortedDuplicates.FirstOrDefault().DuplicateIndex;
+                int currIndex = sortedDuplicates.FirstOrDefault().DuplicateIndex;
+                int prefix = 1;
 
-                string resolution = Utilities.GetResolution(Path.Combine(originalFile));
-                logger += string.Format("Image: {0} | Resolution: {1}", originalFile, resolution);
-
-                try
+                foreach (ImageData image in sortedDuplicates)
                 {
-                    string copyFrom = originalFile;
-                    string duplicateDirectory = string.Empty;
-                    string moveTo = string.Empty;
+                    currIndex = image.DuplicateIndex;
 
-                    if (image.MatchingImages.First().Resolution.Equals(resolution))
+                    if (currIndex != prevIndex)
                     {
-                        duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory, image.DuplicateIndex.ToString());
-                        logger += "\n";
-                    }
-                    else
-                    {
-                        duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory, image.DuplicateIndex.ToString(), Constants.BadDuplicatesDirectory);
-                        logger += " - Bad Resolution!\n";
+                        prefix++;
                     }
 
-                    logger += Constants.VeryLongLine + "\n";
+                    prevIndex = image.DuplicateIndex;
 
-                    moveTo = Path.Combine(duplicateDirectory, Path.GetFileName(originalFile));
-                    Directory.CreateDirectory(duplicateDirectory);
+                    string originalFile = image.OriginalImage;
+                    string folderPath = Path.GetDirectoryName(originalFile);
 
-                    File.Move(copyFrom, moveTo); // Try to move
-                }
-                catch (IOException ex)
-                {
-                    logger += string.Format("Failed to move file! {0}\n", ex.Message);
+                    string resolution = Utilities.GetResolution(Path.Combine(originalFile));
+                    logger += string.Format("Image: {0} | Resolution: {1}", originalFile, resolution);
+
+                    try
+                    {
+                        string copyFrom = originalFile;
+                        string duplicateDirectory = string.Empty;
+                        string moveTo = string.Empty;
+
+                        duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory);
+                        logger += "\n" + Constants.VeryLongLine + "\n";
+
+                        moveTo = Path.Combine(duplicateDirectory, prefix + "_" + Path.GetFileName(originalFile));
+                        Directory.CreateDirectory(duplicateDirectory);
+
+                        File.Move(copyFrom, moveTo); // Try to move
+                        File.SetLastWriteTime(moveTo, DateTime.Now);
+                    }
+                    catch (IOException ex)
+                    {
+                        logger += string.Format("Failed to move file! {0}\n", ex.Message);
+                    }
                 }
             }
 
-            MarkImagesForDownload(imagesWithBetterResolution);
+            serializedImages = MarkImagesForDownload(imagesWithBetterResolution);
             MarkImagesWithNoChange(imagesWithSameResolution);
 
             return logger;
         }
 
         // creates XML file for downloading images and moves them to different folder
-        private static void MarkImagesForDownload(List<ImageData> images)
+        private static string MarkImagesForDownload(List<ImageData> images)
         {
+            string serializedImages = string.Empty;
             string errorLog = string.Empty;
 
             if (images != null && images.Count > 0)
@@ -483,17 +490,14 @@ namespace MikuDownloader
 
                 string xmlStart = "<?xml version=\"1.0\"?>";
 
-                string serializedImages = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(images));
-
-                string fileName = string.Format("{0}_{1}", DateTime.Now.ToString("yyyyMMdd_HHmmss"), Constants.BetterResolutionFilename);
-
-                File.WriteAllText(fileName, serializedImages);
+                serializedImages = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(images));
 
                 if (!string.IsNullOrEmpty(errorLog))
                 {
                     File.AppendAllText("errors.txt", errorLog);
                 }
             }
+            return serializedImages;
         }
 
         // moves files with proper resolution to different folder
