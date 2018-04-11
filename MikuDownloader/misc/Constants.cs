@@ -30,7 +30,8 @@
 
         public static string FacebookTempURL = "fbcdn.net"; //scontent.fsof3-1.fna.fbcdn.net
 
-        public static string TheAnimeGalleryErrorMessage = "The Anime Gallery images must be downloaded manually! Check links above!";
+        public static string TheAnimeGalleryErrorMessage = "The Anime Gallery images must be downloaded manually! Check image post links above!";
+        public static string ZerochanErrorMessage = "Zerochan images require registration and must be downloaded manually! Check image post links above!";
 
         public static string MainDownloadDirectory = "MikuDownloaderImages";
         public static string MainLogFileName = "downloaded-images-log.txt";

@@ -364,7 +364,8 @@ namespace MikuDownloader
                     var watch = Stopwatch.StartNew();
 
                     bool? autoDownload = chkBoxAutoDownload.IsChecked;
-                    string checkLog = await CheckFolderFull(images, autoDownload);
+                    bool? ignoreResolution = chkBoxIgnoreResolutionFolder.IsChecked;
+                    string checkLog = await CheckFolderFull(images, autoDownload, ignoreResolution);
                     logger += checkLog;
 
                     watch.Stop();
@@ -391,7 +392,7 @@ namespace MikuDownloader
         }
 
         // checks a folder for duplicates and find better resolutions
-        private async Task<string> CheckFolderFull(List<string> imagesToCheck, bool? autoDownload)
+        private async Task<string> CheckFolderFull(List<string> imagesToCheck, bool? autoDownload, bool? ignoreResolution)
         {
             List<ImageData> imagesToCheckForDuplicates = new List<ImageData>();
 
@@ -459,7 +460,7 @@ namespace MikuDownloader
                 }
             }
        
-            log = ImageHelper.MarkDuplicateImages(imagesToCheckForDuplicates, out string serializedImages);
+            log = ImageHelper.MarkDuplicateImages(imagesToCheckForDuplicates, ignoreResolution, out string serializedImages);
             if (!string.IsNullOrEmpty(serializedImages))
             {
                 if (autoDownload == true)

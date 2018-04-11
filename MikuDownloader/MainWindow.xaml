@@ -41,5 +41,6 @@
             </Button.Template>
         </Button>
         <CheckBox x:Name="chkBoxAutoDownload" Content="Auto Download" HorizontalAlignment="Left" Margin="10,275,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="chkBoxIgnoreResolutionFolder" Content="Ignore resolution" HorizontalAlignment="Left" Margin="10,290,0,0" VerticalAlignment="Top"/>
     </Grid>
 </Window>

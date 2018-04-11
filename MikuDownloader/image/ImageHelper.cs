@@ -299,9 +299,16 @@ namespace MikuDownloader
 
             images.Sort((x, y) => x.Priority.CompareTo(y.Priority));
 
-            if (images.Count == 1 && images[0].MatchSource == MatchSource.TheAnimeGallery)
+            if (images.Count == 1)
             {
-                throw new ArgumentException(Constants.TheAnimeGalleryErrorMessage);
+                if (images[0].MatchSource == MatchSource.TheAnimeGallery)
+                {
+                    throw new ArgumentException(Constants.TheAnimeGalleryErrorMessage);
+                }
+                else if (images[0].MatchSource == MatchSource.Zerochan)
+                {
+                    throw new ArgumentException(Constants.ZerochanErrorMessage);
+                }
             }
 
             foreach (ImageDetails image in images)
@@ -357,7 +364,7 @@ namespace MikuDownloader
         }
 
         // sorts duplicate files to different folder
-        public static string MarkDuplicateImages(List<ImageData> images, out string serializedImages)
+        public static string MarkDuplicateImages(List<ImageData> images, bool? ignoreResolution, out string serializedImages)
         {
             string logger = string.Empty;
             List<ImageData> imagesWithBetterResolution = new List<ImageData>();
@@ -398,13 +405,20 @@ namespace MikuDownloader
                 {
                     finalDuplicates.Add(image);
                 }
-                else if (image.HasBetterResolution)
+                else if (ignoreResolution == true)
                 {
                     imagesWithBetterResolution.Add(image);
                 }
-                else if (!image.HasBetterResolution)
+                else
                 {
-                    imagesWithSameResolution.Add(image);
+                    if (image.HasBetterResolution)
+                    {
+                        imagesWithBetterResolution.Add(image);
+                    }
+                    else if (!image.HasBetterResolution)
+                    {
+                        imagesWithSameResolution.Add(image);
+                    }
                 }
             }
 

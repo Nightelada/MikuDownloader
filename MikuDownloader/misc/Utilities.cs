@@ -348,11 +348,6 @@ namespace MikuDownloader.misc
                 throw new ArgumentException("Error when parsing danbooru url! Image was probably deleted or removed!");
             }
 
-            if (!origImage.StartsWith("https"))
-            {
-                origImage = String.Format("https://danbooru.donmai.us{0}", origImage);
-            }
-
             return origImage;
         }
 
