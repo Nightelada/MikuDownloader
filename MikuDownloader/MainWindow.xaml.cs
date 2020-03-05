@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using XamlAnimatedGif;
 
 namespace MikuDownloader
 {
@@ -52,6 +53,12 @@ namespace MikuDownloader
         private async void btnDownloadFromURL_Click(object sender, RoutedEventArgs e)
         {
             BlockAllButtons();
+
+            var template = btnGif.Template;
+            var myControl = (Image)template.FindName("imgControlGif", btnGif);
+            var uri = new Uri("pack://application:,,,/Resources/__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif");
+
+            AnimationBehavior.SetSourceUri(myControl, uri);
 
             string imageURL = txtBoxURL.Text;
             string status = string.Empty;
@@ -275,10 +282,11 @@ namespace MikuDownloader
             int notFoundCount = 0;
             string noMatchesImages = "Pictures with no relative matches found:\n";
             string failedToDownloadImages = "Pictures that failed to download:\n";
+            string prevText = txtBlockData.Text;
 
             foreach (string imageURL in finalUrls)
             {
-                currStatus = $"Successful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
+                currStatus = $"{prevText}\n\nSuccessful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
                 currPic++;
                 string status = string.Empty;
                 txtBlockData.Text = $"{currStatus}\nChecking image {currPic} of {lastPic}...\n";
@@ -338,7 +346,7 @@ namespace MikuDownloader
                     File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
                 }
             }
-            currStatus = $"Successful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
+            currStatus = $"{prevText}\n\nSuccessful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
             txtBlockData.Text = $"Finished checking image list! Check log for more info!\n{currStatus}";
             if (failedCount > 0 || notFoundCount > 0)
             {
@@ -627,39 +635,9 @@ namespace MikuDownloader
             }
         }
 
-        private void menuFromFile_Click(object sender, RoutedEventArgs e)
-        {
-            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromFileHelpText);
-            tempHelpWindow.Show();
-        }
-
-        private void menuFromURL_Click(object sender, RoutedEventArgs e)
-        {
-            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromURLHelpText);
-            tempHelpWindow.Show();
-        }
-
-        private void menuFromList_Click(object sender, RoutedEventArgs e)
-        {
-            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromListHelpText);
-            tempHelpWindow.Show();
-        }
-
         private void menuClose_Click(object sender, RoutedEventArgs e)
         {
             Close();
-        }
-
-        private void menuCheckFolder_Click(object sender, RoutedEventArgs e)
-        {
-            HelpWindow tempHelpWindow = new HelpWindow(Constants.CheckFolderHelpText);
-            tempHelpWindow.Show();
-        }
-
-        private void menuXML_Click(object sender, RoutedEventArgs e)
-        {
-            HelpWindow tempHelpWindow = new HelpWindow(Constants.FromXMLHelpText);
-            tempHelpWindow.Show();
         }
 
         private void BlockAllButtons()
@@ -700,37 +678,65 @@ namespace MikuDownloader
 
         private void LstBoxDragAndDrop_Drop(object sender, DragEventArgs e)
         {
-            string[] draggedThings = (string[])e.Data.GetData(DataFormats.FileDrop, false);
             FileType ft = FileType.Other;
+            string[] draggedFiles = new string[] { };
+            string draggedText = string.Empty;
+            string[] draggedImages = new string[] { };
 
-            foreach (string s in draggedThings)
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                // Check if folder
-                // TODO: Implement multiple levels down if needed
-                if (Directory.Exists(s))
+                draggedFiles = (string[])e.Data.GetData(DataFormats.FileDrop, false);
+            }
+
+            if (e.Data.GetDataPresent(DataFormats.Text))
+            {
+                draggedText = (string)e.Data.GetData(DataFormats.Text, false);
+            }
+
+            if (draggedFiles.Count() > 0)
+            {
+                foreach (string s in draggedFiles)
                 {
-                    ft = FileType.Directory;
-                }
-                else
-                {
-                    if (s.EndsWith(".txt"))
+                    if (Directory.Exists(s))
                     {
-                        ft = FileType.Txt;
-                    }
-                    else if (s.EndsWith(".jpg") || s.EndsWith(".jpeg") || s.EndsWith(".jfif")
-                        || s.EndsWith(".tiff") || s.EndsWith(".gif")
-                        || s.EndsWith(".png") || s.EndsWith(".bmp"))
-                    {
-                        ft = FileType.Image;
+                        ft = FileType.Directory;
                     }
                     else
                     {
-                        ft = FileType.Other;
+                        if (s.EndsWith(".txt"))
+                        {
+                            ft = FileType.Txt;
+                        }
+                        else if (s.EndsWith(".jpg") || s.EndsWith(".jpeg") || s.EndsWith(".jfif")
+                            || s.EndsWith(".tiff") || s.EndsWith(".gif")
+                            || s.EndsWith(".png") || s.EndsWith(".bmp"))
+                        {
+                            ft = FileType.Image;
+                        }
+                        else
+                        {
+                            ft = FileType.Other;
+                        }
+                    }
+
+                    Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(ft, s);
+                    dragAndDropItems.Add(tempTuple);
+                }
+            }
+
+            if (!String.IsNullOrEmpty(draggedText))
+            {
+                string[] splitDraggedText = draggedText.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+                ft = FileType.URL;
+
+                foreach (string s2 in splitDraggedText)
+                {
+                    if (!String.IsNullOrEmpty(s2))
+                    {
+                        Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(ft, s2.Trim());
+                        dragAndDropItems.Add(tempTuple);
                     }
                 }
-
-                Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(ft, s);
-                dragAndDropItems.Add(tempTuple);
             }
         }
 
@@ -738,10 +744,61 @@ namespace MikuDownloader
         {
             if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
-                string url = Clipboard.GetText();
-                Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, url);
-                dragAndDropItems.Add(tempTuple);
+                IDataObject d = Clipboard.GetDataObject();
+                FileType ft = FileType.Other;
 
+                // Check if text is copied
+                if (d.GetDataPresent(DataFormats.Text))
+                {
+                    string url = Clipboard.GetText();
+                    if (!String.IsNullOrEmpty(url))
+                    {
+                        Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, url);
+                        dragAndDropItems.Add(tempTuple);
+                    }
+                }
+                // Check if local file or directory has been copied
+                else if (d.GetDataPresent(DataFormats.FileDrop))
+                {
+                    string[] files = (string[])d.GetData(DataFormats.FileDrop);
+
+                    foreach (string s in files)
+                    {
+                        if (Directory.Exists(s))
+                        {
+                            ft = FileType.Directory;
+                        }
+                        else
+                        {
+                            if (s.EndsWith(".txt"))
+                            {
+                                ft = FileType.Txt;
+                            }
+                            else if (s.EndsWith(".jpg") || s.EndsWith(".jpeg") || s.EndsWith(".jfif")
+                                || s.EndsWith(".tiff") || s.EndsWith(".gif")
+                                || s.EndsWith(".png") || s.EndsWith(".bmp"))
+                            {
+                                ft = FileType.Image;
+                            }
+                            else
+                            {
+                                ft = FileType.Other;
+                            }
+                        }
+
+                        Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(ft, s);
+                        dragAndDropItems.Add(tempTuple);
+
+                    }
+                }
+                // Check if online image has been copied
+                else if (d.GetDataPresent(DataFormats.Html))
+                {
+                    var files = d.GetData(DataFormats.Html);
+                    string imgUrl = Utilities.GetUrlFromClipboardImage(files.ToString());
+                    Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, imgUrl);
+                    dragAndDropItems.Add(tempTuple);
+                }
             }
 
             else if (e.Key == Key.Delete && lstBoxDragAndDrop.HasItems && lstBoxDragAndDrop.SelectedItems != null)
@@ -760,16 +817,54 @@ namespace MikuDownloader
             }
         }
 
-        private void BtnDragDrop_Click(object sender, RoutedEventArgs e)
+        private async void BtnDragDrop_Click(object sender, RoutedEventArgs e)
         {
+            BlockAllButtons();
+
             if (dragAndDropItems.Count > 0)
             {
+                List<string> URLs = new List<string>();
+                List<string> filenames = new List<string>();
 
+                foreach (Tuple<FileType, string> tuple in dragAndDropItems)
+                {
+                    if (tuple.Item1 == FileType.Image)
+                    {
+                        filenames.Add(tuple.Item2);
+                    }
+                    else if (tuple.Item1 == FileType.URL)
+                    {
+                        URLs.Add(tuple.Item2);
+                    }
+                    else if (tuple.Item1 == FileType.Txt)
+                    {
+                        URLs.AddRange(Utilities.ParseURLs(tuple.Item2));
+                    }
+                    else if (tuple.Item1 == FileType.Directory)
+                    {
+                        filenames.AddRange(Utilities.GetAllImagesFromFolder(tuple.Item2));
+                    }
+                }
+
+                txtBlockData.Text = String.Format($"Finished checking items:{Environment.NewLine}Total URLs: {URLs.Count}{Environment.NewLine}Total files to check: {filenames.Count}");
+
+                if (URLs.Count > 0)
+                {
+                    await DownloadFromList(URLs);
+                }
+
+                if (filenames.Count > 0)
+                {
+
+                }
             }
             else
             {
                 txtBlockData.Text = "Drag&Drop list has no items!";
             }
+
+            ReleaseAllButtons();
+
         }
     }
 }

@@ -14,13 +14,6 @@
                     <MenuItem x:Name="menuOpenDirectory" Header="Open Directory" Click="menuOpenDirectory_Click"/>
                     <MenuItem x:Name="menuClose" Header="Exit" Click="menuClose_Click"/>
                 </MenuItem>
-                <MenuItem Header="Help">
-                    <MenuItem x:Name="menuFromURL" Header="From URL" Click="menuFromURL_Click"/>
-                    <MenuItem x:Name="menuFromList" Header="Download From List" Click="menuFromList_Click"/>
-                    <MenuItem x:Name="menuFromFile" Header="From File" Click="menuFromFile_Click"/>
-                    <MenuItem x:Name="menuCheckFolder" Header="Check Folder" Click="menuCheckFolder_Click"/>
-                    <MenuItem x:Name="menuXML" Header="Download from XML" Click="menuXML_Click"/>
-                </MenuItem>
             </Menu>
         </DockPanel>
         <TextBlock HorizontalAlignment="Left" Margin="10,33,0,0" TextWrapping="Wrap" Text="Type URL of picture here:" VerticalAlignment="Top"/>
@@ -33,10 +26,10 @@
         <CheckBox x:Name="chkBoxKeepFilenames" Content="Keep filenames" HorizontalAlignment="Left" Margin="10,182,0,0" VerticalAlignment="Top"/>
         <Button x:Name="btnDeserializeFolder" Content="Download From XML" HorizontalAlignment="Left" Margin="165,248,0,0" VerticalAlignment="Top" Width="133" Click="btnDeserializeFolder_Click" RenderTransformOrigin="0.118,1.06"/>
         <Button x:Name="btnCheckFolder" Content="Check Folder" HorizontalAlignment="Left" Margin="10,248,0,0" VerticalAlignment="Top" Width="133" Click="btnCheckFolder_Click"/>
-        <Button Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Left" Margin="550,162,0,0" VerticalAlignment="Top" Width="150" Height="125">
+        <Button x:Name="btnGif" Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Left" Margin="550,162,0,0" VerticalAlignment="Top" Width="150" Height="125">
             <Button.Template>
                 <ControlTemplate>
-                    <Image gif:AnimationBehavior.SourceUri="/Resources/__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif"/>
+                    <Image x:Name="imgControlGif" gif:AnimationBehavior.SourceUri="/Resources/__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif"/>
                 </ControlTemplate>
             </Button.Template>
         </Button>
@@ -44,5 +37,6 @@
         <CheckBox x:Name="chkBoxIgnoreResolutionFolder" Content="Ignore resolution" HorizontalAlignment="Left" Margin="10,290,0,0" VerticalAlignment="Top"/>
         <ListBox x:Name="lstBoxDragAndDrop" HorizontalAlignment="Left" Height="241" Margin="741,46,0,0" VerticalAlignment="Top" Width="402" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop" SelectionMode="Multiple"/>
         <Button x:Name="btnDragDrop" Content="From Drag&amp;Drop" HorizontalAlignment="Left" Margin="165,194,0,0" VerticalAlignment="Top" Width="111" Click="BtnDragDrop_Click"/>
+        <Label Content="DROP THINGS HERE OR PASTE" HorizontalAlignment="Left" Margin="741,19,0,0" VerticalAlignment="Top" Height="27" Width="393" Background="#FF00FFD8"/>
     </Grid>
 </Window>

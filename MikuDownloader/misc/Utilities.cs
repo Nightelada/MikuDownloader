@@ -3,6 +3,7 @@ using Microsoft.Win32;
 using Ookii.Dialogs.Wpf;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
@@ -98,14 +99,24 @@ namespace MikuDownloader.misc
         // parses a file full of URLs to a list
         public static List<string> ParseURLs(string filepath)
         {
-            List<string> URLs = new List<string>();
+            List<string> finalURLs = new List<string>();
+            List<string> tempList = new List<string>();
 
             if (!string.IsNullOrEmpty(filepath))
             {
-                URLs = File.ReadAllLines(filepath).ToList();
+                tempList = File.ReadAllLines(filepath).Where(x => !String.IsNullOrEmpty(x)).ToList();
             }
 
-            return URLs;
+            foreach (string url in tempList)
+            {
+                bool result = Uri.TryCreate(url, UriKind.Absolute, out Uri uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+
+                if (result)
+                {
+                    finalURLs.Add(url);
+                }
+            }
+            return finalURLs;
         }
 
         // checks if the file is image
@@ -124,6 +135,7 @@ namespace MikuDownloader.misc
                 List<string> jpg = new List<string> { "FF", "D8" };
                 List<string> gif = new List<string> { "47", "49", "46" };
                 List<string> png = new List<string> { "89", "50", "4E", "47", "0D", "0A", "1A", "0A" };
+
                 List<List<string>> imgTypes = new List<List<string>> { jpg, gif, png };
 
                 List<string> bytesIterated = new List<string>();
@@ -263,6 +275,8 @@ namespace MikuDownloader.misc
         {
             try
             {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
                 HtmlWeb web = new HtmlWeb();
 
                 HtmlDocument htmlDoc = web.Load(postURL);
@@ -671,6 +685,33 @@ namespace MikuDownloader.misc
                     }
                 }
             }
+        }
+
+        public static string GetUrlFromClipboardImage(string htmlText)
+        {
+            HtmlDocument htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(htmlText);
+
+            string url = htmlDoc.DocumentNode.SelectSingleNode(".//body/img").GetAttributeValue("src",null);
+
+            return url;
+        }
+
+        public static List<string> GetAllImagesFromFolder(string directory)
+        {
+            List<string> finalImages = new List<string>();
+
+            List<string> tempImageList = Directory.GetFiles(directory, "*", SearchOption.AllDirectories).ToList();
+
+            foreach (string image in tempImageList)
+            {
+                if (IsImage(image))
+                {
+                    finalImages.Add(image);
+                }
+            }
+
+            return finalImages;
         }
     }
 }

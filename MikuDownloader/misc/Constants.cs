@@ -3,6 +3,7 @@
     public static class Constants
     {
         public static int Win32MaxPath = 250;
+        public static int MaximumRecursions = 4;
 
         // imgur data
         public static string UploadImageEndpoint = "https://api.imgur.com/3/image";
