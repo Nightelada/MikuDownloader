@@ -6,7 +6,7 @@
         xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
         xmlns:local="clr-namespace:MikuDownloader"
         mc:Ignorable="d"
-        Title="MikuDownloader" Height="350" Width="729" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" MinWidth="673" MinHeight="350">
+        Title="MikuDownloader" Height="350" Width="1221.029" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" MinWidth="673" MinHeight="350" PreviewKeyDown="Window_PreviewKeyDown">
     <Grid>
         <DockPanel Margin="0,0,0,303">
             <Menu DockPanel.Dock="Top">
@@ -42,5 +42,7 @@
         </Button>
         <CheckBox x:Name="chkBoxAutoDownload" Content="Auto Download" HorizontalAlignment="Left" Margin="10,275,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="chkBoxIgnoreResolutionFolder" Content="Ignore resolution" HorizontalAlignment="Left" Margin="10,290,0,0" VerticalAlignment="Top"/>
+        <ListBox x:Name="lstBoxDragAndDrop" HorizontalAlignment="Left" Height="241" Margin="741,46,0,0" VerticalAlignment="Top" Width="402" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop"/>
+        <Button x:Name="btnDragDrop" Content="From Drag&amp;Drop" HorizontalAlignment="Left" Margin="165,194,0,0" VerticalAlignment="Top" Width="111" Click="BtnDragDrop_Click"/>
     </Grid>
 </Window>

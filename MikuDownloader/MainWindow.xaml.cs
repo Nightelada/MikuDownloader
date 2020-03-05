@@ -1,4 +1,5 @@
-﻿using MikuDownloader.image;
+﻿using MikuDownloader.enums;
+using MikuDownloader.image;
 using MikuDownloader.misc;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace MikuDownloader
 {
@@ -459,7 +461,7 @@ namespace MikuDownloader
                     }
                 }
             }
-       
+
             log = ImageHelper.MarkDuplicateImages(imagesToCheckForDuplicates, ignoreResolution, out string serializedImages);
             if (!string.IsNullOrEmpty(serializedImages))
             {
@@ -673,6 +675,70 @@ namespace MikuDownloader
             foreach (CheckBox c in checkBoxesList)
             {
                 c.IsEnabled = true;
+            }
+        }
+
+        private void LstBoxDragAndDrop_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.All;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+        }
+
+        private void LstBoxDragAndDrop_Drop(object sender, DragEventArgs e)
+        {
+            string[] draggedThings = (string[])e.Data.GetData(DataFormats.FileDrop, false);
+            FileType ft;
+
+            foreach (string s in draggedThings)
+            {
+                if (s.EndsWith(".txt"))
+                {
+                    ft = FileType.Txt;
+                }
+                else if (s.EndsWith(".jpg") || s.EndsWith(".jpeg") || s.EndsWith(".jfif")
+                    || s.EndsWith(".tiff") || s.EndsWith(".gif")
+                    || s.EndsWith(".png") || s.EndsWith(".bmp"))
+                {
+                    ft = FileType.Image;
+                }
+                else
+                {
+                    ft = FileType.Other;
+                }
+
+                Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(ft, s);
+                lstBoxDragAndDrop.Items.Add(tempTuple);
+            }
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                string url = Clipboard.GetText();
+                Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, url);
+                lstBoxDragAndDrop.Items.Add(tempTuple);
+
+            }
+
+        }
+
+        private void BtnDragDrop_Click(object sender, RoutedEventArgs e)
+        {
+            if (lstBoxDragAndDrop.HasItems)
+            {
+                List<Tuple<FileType, string>> tempList = lstBoxDragAndDrop.Items.Cast<Tuple<FileType, string>>().ToList();
+
+            }
+            else
+            {
+                txtBlockData.Text = "Drag&Drop list has no items!";
             }
         }
     }
