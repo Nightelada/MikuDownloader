@@ -42,7 +42,7 @@
         </Button>
         <CheckBox x:Name="chkBoxAutoDownload" Content="Auto Download" HorizontalAlignment="Left" Margin="10,275,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="chkBoxIgnoreResolutionFolder" Content="Ignore resolution" HorizontalAlignment="Left" Margin="10,290,0,0" VerticalAlignment="Top"/>
-        <ListBox x:Name="lstBoxDragAndDrop" HorizontalAlignment="Left" Height="241" Margin="741,46,0,0" VerticalAlignment="Top" Width="402" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop"/>
+        <ListBox x:Name="lstBoxDragAndDrop" HorizontalAlignment="Left" Height="241" Margin="741,46,0,0" VerticalAlignment="Top" Width="402" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop" SelectionMode="Multiple"/>
         <Button x:Name="btnDragDrop" Content="From Drag&amp;Drop" HorizontalAlignment="Left" Margin="165,194,0,0" VerticalAlignment="Top" Width="111" Click="BtnDragDrop_Click"/>
     </Grid>
 </Window>

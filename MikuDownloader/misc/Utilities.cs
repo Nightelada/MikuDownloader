@@ -7,7 +7,6 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 
 namespace MikuDownloader.misc
@@ -42,7 +41,7 @@ namespace MikuDownloader.misc
             return currTime + "_" + Constants.DuplicatesLogFileName;
         }
 
-        // gets log filename for duplicates log
+        // gets log filename for not downloaded log
         public static string GetNotDownloadedFilename()
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");

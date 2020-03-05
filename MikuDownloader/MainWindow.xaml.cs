@@ -3,6 +3,7 @@ using MikuDownloader.image;
 using MikuDownloader.misc;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,23 +21,30 @@ namespace MikuDownloader
     {
         private List<Button> buttonsList;
         private List<CheckBox> checkBoxesList;
+        ObservableCollection<Tuple<FileType, string>> dragAndDropItems;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            dragAndDropItems = new ObservableCollection<Tuple<FileType, string>>();
+            lstBoxDragAndDrop.ItemsSource = dragAndDropItems;
+
             buttonsList = new List<Button>()
             {
                 btnDownloadFromList,
                 btnDownloadFromFile,
                 btnDownloadFromURL,
                 btnCheckFolder,
-                btnDeserializeFolder
+                btnDeserializeFolder,
+                btnDragDrop
             };
             checkBoxesList = new List<CheckBox>()
             {
                 chkBoxAutoDownload,
                 chkBoxIgnoreResolution,
-                chkBoxKeepFilenames
+                chkBoxKeepFilenames,
+                chkBoxIgnoreResolutionFolder
             };
         }
 
@@ -693,27 +701,36 @@ namespace MikuDownloader
         private void LstBoxDragAndDrop_Drop(object sender, DragEventArgs e)
         {
             string[] draggedThings = (string[])e.Data.GetData(DataFormats.FileDrop, false);
-            FileType ft;
+            FileType ft = FileType.Other;
 
             foreach (string s in draggedThings)
             {
-                if (s.EndsWith(".txt"))
+                // Check if folder
+                // TODO: Implement multiple levels down if needed
+                if (Directory.Exists(s))
                 {
-                    ft = FileType.Txt;
-                }
-                else if (s.EndsWith(".jpg") || s.EndsWith(".jpeg") || s.EndsWith(".jfif")
-                    || s.EndsWith(".tiff") || s.EndsWith(".gif")
-                    || s.EndsWith(".png") || s.EndsWith(".bmp"))
-                {
-                    ft = FileType.Image;
+                    ft = FileType.Directory;
                 }
                 else
                 {
-                    ft = FileType.Other;
+                    if (s.EndsWith(".txt"))
+                    {
+                        ft = FileType.Txt;
+                    }
+                    else if (s.EndsWith(".jpg") || s.EndsWith(".jpeg") || s.EndsWith(".jfif")
+                        || s.EndsWith(".tiff") || s.EndsWith(".gif")
+                        || s.EndsWith(".png") || s.EndsWith(".bmp"))
+                    {
+                        ft = FileType.Image;
+                    }
+                    else
+                    {
+                        ft = FileType.Other;
+                    }
                 }
 
                 Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(ft, s);
-                lstBoxDragAndDrop.Items.Add(tempTuple);
+                dragAndDropItems.Add(tempTuple);
             }
         }
 
@@ -723,17 +740,30 @@ namespace MikuDownloader
             {
                 string url = Clipboard.GetText();
                 Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, url);
-                lstBoxDragAndDrop.Items.Add(tempTuple);
+                dragAndDropItems.Add(tempTuple);
 
             }
 
+            else if (e.Key == Key.Delete && lstBoxDragAndDrop.HasItems && lstBoxDragAndDrop.SelectedItems != null)
+            {
+                List<Tuple<FileType, string>> itemsToDelete = new List<Tuple<FileType, string>>();
+
+                foreach (var item in lstBoxDragAndDrop.SelectedItems)
+                {
+                    itemsToDelete.Add((Tuple<FileType, string>)item);
+                }
+
+                foreach (Tuple<FileType, string> delItem in itemsToDelete)
+                {
+                    dragAndDropItems.Remove(delItem);
+                }
+            }
         }
 
         private void BtnDragDrop_Click(object sender, RoutedEventArgs e)
         {
-            if (lstBoxDragAndDrop.HasItems)
+            if (dragAndDropItems.Count > 0)
             {
-                List<Tuple<FileType, string>> tempList = lstBoxDragAndDrop.Items.Cast<Tuple<FileType, string>>().ToList();
 
             }
             else

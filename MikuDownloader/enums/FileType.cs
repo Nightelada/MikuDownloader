@@ -2,6 +2,7 @@
 {
     public enum FileType
     {
+        Directory,
         Txt,
         Image,
         URL,
