@@ -6,37 +6,32 @@
         xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
         xmlns:local="clr-namespace:MikuDownloader"
         mc:Ignorable="d"
-        Title="MikuDownloader" Height="350" Width="1221.029" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" MinWidth="673" MinHeight="350" PreviewKeyDown="Window_PreviewKeyDown">
-    <Grid>
-        <DockPanel Margin="0,0,0,303">
-            <Menu DockPanel.Dock="Top">
-                <MenuItem Header="_File">
-                    <MenuItem x:Name="menuOpenDirectory" Header="Open Directory" Click="menuOpenDirectory_Click"/>
-                    <MenuItem x:Name="menuClose" Header="Exit" Click="menuClose_Click"/>
-                </MenuItem>
-            </Menu>
-        </DockPanel>
-        <TextBlock HorizontalAlignment="Left" Margin="10,33,0,0" TextWrapping="Wrap" Text="Type URL of picture here:" VerticalAlignment="Top"/>
-        <TextBox x:Name="txtBoxURL" HorizontalAlignment="Left" Height="28" Margin="10,54,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="288"/>
-        <Button x:Name="btnDownloadFromURL" Content="From URL" HorizontalAlignment="Left" Margin="10,100,0,0" VerticalAlignment="Top" Width="133" Click="btnDownloadFromURL_Click"/>
-        <TextBox x:Name="txtBlockData" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalAlignment="Left" Margin="312,46,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="242" Width="389"/>
-        <Button x:Name="btnDownloadFromList" Content="Download from list" HorizontalAlignment="Left" Margin="165,100,0,0" VerticalAlignment="Top" Width="133" Click="btnDownloadFromList_Click"/>
-        <Button x:Name="btnDownloadFromFile" Content="From File" HorizontalAlignment="Left" Margin="10,142,0,0" VerticalAlignment="Top" Width="133" Click="btnDownLoadFromFile_Click"/>
-        <CheckBox x:Name="chkBoxIgnoreResolution" Content="Ignore resolution" HorizontalAlignment="Left" Margin="10,167,0,0" VerticalAlignment="Top"/>
-        <CheckBox x:Name="chkBoxKeepFilenames" Content="Keep filenames" HorizontalAlignment="Left" Margin="10,182,0,0" VerticalAlignment="Top"/>
-        <Button x:Name="btnDeserializeFolder" Content="Download From XML" HorizontalAlignment="Left" Margin="165,248,0,0" VerticalAlignment="Top" Width="133" Click="btnDeserializeFolder_Click" RenderTransformOrigin="0.118,1.06"/>
-        <Button x:Name="btnCheckFolder" Content="Check Folder" HorizontalAlignment="Left" Margin="10,248,0,0" VerticalAlignment="Top" Width="133" Click="btnCheckFolder_Click"/>
-        <Button x:Name="btnGif" Background="Transparent" BorderBrush="Transparent" HorizontalAlignment="Left" Margin="550,162,0,0" VerticalAlignment="Top" Width="150" Height="125">
-            <Button.Template>
-                <ControlTemplate>
-                    <Image x:Name="imgControlGif" gif:AnimationBehavior.SourceUri="/Resources/__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif"/>
-                </ControlTemplate>
-            </Button.Template>
-        </Button>
-        <CheckBox x:Name="chkBoxAutoDownload" Content="Auto Download" HorizontalAlignment="Left" Margin="10,275,0,0" VerticalAlignment="Top"/>
-        <CheckBox x:Name="chkBoxIgnoreResolutionFolder" Content="Ignore resolution" HorizontalAlignment="Left" Margin="10,290,0,0" VerticalAlignment="Top"/>
-        <ListBox x:Name="lstBoxDragAndDrop" HorizontalAlignment="Left" Height="241" Margin="741,46,0,0" VerticalAlignment="Top" Width="402" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop" SelectionMode="Multiple"/>
-        <Button x:Name="btnDragDrop" Content="From Drag&amp;Drop" HorizontalAlignment="Left" Margin="165,194,0,0" VerticalAlignment="Top" Width="111" Click="BtnDragDrop_Click"/>
-        <Label Content="DROP THINGS HERE OR PASTE" HorizontalAlignment="Left" Margin="741,19,0,0" VerticalAlignment="Top" Height="27" Width="393" Background="#FF00FFD8"/>
-    </Grid>
+        Title="MikuDownloader" ResizeMode="CanResize" WindowStartupLocation="CenterScreen" PreviewKeyDown="Window_PreviewKeyDown" Height="350" Width="1050">
+    <Viewbox Stretch="Uniform" StretchDirection="Both" Margin="10,10,10,10">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width=".45*"/>
+                <ColumnDefinition Width=".10*"/>
+                <ColumnDefinition Width=".45*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height=".10*"/>
+                <RowDefinition Height=".20*"/>
+                <RowDefinition Height=".20*"/>
+                <RowDefinition Height=".50*"/>
+            </Grid.RowDefinitions>
+            <Label Grid.Column="0" Grid.Row="0" Content="Drop and/or paste files and folders here" Height="27" Width="420" Background="#FF00FFD8" BorderBrush="Gray" BorderThickness="1"/>
+            <ListBox Grid.Column="0" Grid.Row="1" Grid.RowSpan="3" x:Name="lstBoxDragAndDrop" Height="252" Width="420" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop" SelectionMode="Multiple"/>
+            <Button Grid.Column="1" Grid.Row="2" x:Name="btnDragDrop" Content="Go Go Miku Loader" Width="111" Click="BtnDragDrop_Click"/>
+            <Button Grid.Column="1" Grid.Row="3" x:Name="btnGif" Background="Transparent" BorderBrush="Transparent"  Width="150" Height="125">
+                <Button.Template>
+                    <ControlTemplate>
+                        <Image x:Name="imgControlGif" gif:AnimationBehavior.SourceUri="/Resources/MikuGifs/__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif"/>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Label Grid.Column="2" Grid.Row="0" Content="Information" Height="27" Width="420" Background="#FF00FFD8" BorderBrush="Gray" BorderThickness="1"/>
+            <TextBox Grid.Column="2" Grid.Row="1" Grid.RowSpan="3" x:Name="txtBlockData" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" Height="252" Width="420"/>
+        </Grid>
+    </Viewbox>
 </Window>

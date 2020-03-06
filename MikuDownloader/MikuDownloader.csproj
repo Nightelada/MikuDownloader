@@ -142,9 +142,30 @@
     </Resource>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif">
+    <Resource Include="Resources\MikuGifs\__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\MikuGifs\0f76a3a2015fe642b65e500b50afd4fba61694df.gif" />
+    <Resource Include="Resources\MikuGifs\1700899563ce1a83e36b82dfa55b476e08a132c6.gif" />
+    <Resource Include="Resources\MikuGifs\1b1adbb75589f4b949ca5861220ddfbe160c38f6.gif" />
+    <Resource Include="Resources\MikuGifs\38f586a05563270767e165af47856249b66dda85.gif" />
+    <Resource Include="Resources\MikuGifs\47b6a63753fd1a8244c01dd9e70dca5a601b1abb.gif" />
+    <Resource Include="Resources\MikuGifs\47b6a63753fd1a8244c01dd9e70dca5a601b1abb4.gif" />
+    <Resource Include="Resources\MikuGifs\4b5a21731a4f82470e33ecfcbe4672843b947667.gif" />
+    <Resource Include="Resources\MikuGifs\53ce1d43677f9747886432b2498bf0c5a21b11b2.gif" />
+    <Resource Include="Resources\MikuGifs\5a1f92fd401600451787de7d4f9854a34d54e102.gif" />
+    <Resource Include="Resources\MikuGifs\6ccf57bbc3d62320a2c3a71112d2ef8e85ee28e5.gif" />
+    <Resource Include="Resources\MikuGifs\7251125c975f32f952e53fc8b2aa6e632cb4213c.gif" />
+    <Resource Include="Resources\MikuGifs\7a13d7e6127592935969b3d8c3b6d9ba90dfa925.gif" />
+    <Resource Include="Resources\MikuGifs\8661d6801753beb97ceb53fd2444302cb4e753de.gif" />
+    <Resource Include="Resources\MikuGifs\96bb6beae72e742df1432aae80a21d46ad4447b5.gif" />
+    <Resource Include="Resources\MikuGifs\b6a14a9e2982c8280d6cba7fc9febf35edbcc73b.gif" />
+    <Resource Include="Resources\MikuGifs\bfaacf42cd98418fa360c0092159ced813eea485.gif" />
+    <Resource Include="Resources\MikuGifs\c94781d6777ad02b145f158a309a6686c9f3eef2.gif" />
+    <Resource Include="Resources\MikuGifs\cb422325bc8431f583093fbf214dca350593c53e.gif" />
+    <Resource Include="Resources\MikuGifs\d08bc82159c516e215c884e435b26f99dfe91c44.gif" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Fody.4.0.2\build\Fody.targets" Condition="Exists('..\packages\Fody.4.0.2\build\Fody.targets')" />

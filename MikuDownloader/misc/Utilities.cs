@@ -2,12 +2,15 @@
 using Microsoft.Win32;
 using Ookii.Dialogs.Wpf;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Resources;
 using System.Windows.Media.Imaging;
 
 namespace MikuDownloader.misc
@@ -712,6 +715,24 @@ namespace MikuDownloader.misc
             }
 
             return finalImages;
+        }
+
+        public static string[] GetResourcesUnder(string folder)
+        {
+            folder = folder.ToLower() + "/";
+
+            var assembly = Assembly.GetCallingAssembly();
+            var resourcesName = assembly.GetName().Name + ".g.resources";
+            var stream = assembly.GetManifestResourceStream(resourcesName);
+            var resourceReader = new ResourceReader(stream);
+
+            var resources =
+                from p in resourceReader.OfType<DictionaryEntry>()
+                let theme = (string)p.Key
+                where theme.StartsWith(folder)
+                select theme.Substring(folder.Length);
+
+            return resources.ToArray();
         }
     }
 }
