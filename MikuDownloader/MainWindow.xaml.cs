@@ -4,14 +4,12 @@ using MikuDownloader.misc;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using XamlAnimatedGif;
 
 namespace MikuDownloader
@@ -54,6 +52,8 @@ namespace MikuDownloader
             string failedToDownloadImages = "Pictures that failed to download:\n";
             string prevText = txtBlockData.Text;
 
+            List<ImageData> allImages = new List<ImageData>();
+
             foreach (string imageURL in finalUrls)
             {
                 currStatus = $"{prevText}\n\nSuccessful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
@@ -82,6 +82,7 @@ namespace MikuDownloader
                             status += "Successfully downloaded image!\n";
                             txtBlockData.Text += $"Successfully downloaded image!\n";
                             downloadedCount++;
+                            imageList.HasBeenDownloaded = true;
                         }
                         else
                         {
@@ -89,13 +90,18 @@ namespace MikuDownloader
                             txtBlockData.Text += $"{errorText} Check logs for more info!";
                             failedCount++;
                             failedToDownloadImages += imageURL + "\n";
+                            imageList.HasBeenDownloaded = false;
                         }
+
+                        allImages.Add(imageList);
+
                     }
                     else
                     {
                         txtBlockData.Text += $"No matches found for {Path.GetFileName(imageURL)}!";
                         notFoundCount++;
                         noMatchesImages += imageURL + "\n";
+                        allImages.Add(new ImageData(imageURL));
                     }
                 }
                 catch (Exception ex)
@@ -146,6 +152,8 @@ namespace MikuDownloader
             string failedToDownloadImages = "Pictures that failed to download:\n";
             string prevText = txtBlockData.Text;
 
+            List<ImageData> allImages = new List<ImageData>();
+
             foreach (string imageFile in finalFiles)
             {
                 currStatus = $"{prevText}\n\nSuccessful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
@@ -174,6 +182,7 @@ namespace MikuDownloader
                             status += "Successfully downloaded image!\n";
                             txtBlockData.Text += $"Successfully downloaded image!\n";
                             downloadedCount++;
+                            imageList.HasBeenDownloaded = true;
                         }
                         else
                         {
@@ -181,13 +190,18 @@ namespace MikuDownloader
                             txtBlockData.Text += $"{errorText} Check logs for more info!";
                             failedCount++;
                             failedToDownloadImages += imageFile + "\n";
+                            imageList.HasBeenDownloaded = false;
                         }
+
+                        allImages.Add(imageList);
+
                     }
                     else
                     {
                         txtBlockData.Text += $"No matches found for {Path.GetFileName(imageFile)}!";
                         notFoundCount++;
                         noMatchesImages += imageFile + "\n";
+                        allImages.Add(new ImageData(imageFile));
                     }
                 }
                 catch (Exception ex)

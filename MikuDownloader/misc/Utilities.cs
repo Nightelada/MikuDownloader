@@ -31,20 +31,6 @@ namespace MikuDownloader.misc
             return currTime + "_" + Constants.MainLogFileName;
         }
 
-        // gets log filename for secondary log
-        public static string GetSecondaryLogFileName()
-        {
-            var currTime = DateTime.Now.ToString("yyyyMMdd");
-            return currTime + "_" + Constants.SecondaryLogFileName;
-        }
-
-        // gets log filename for duplicates log
-        public static string GetDuplicatesLogFileName()
-        {
-            var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            return currTime + "_" + Constants.DuplicatesLogFileName;
-        }
-
         // gets log filename for not downloaded log
         public static string GetNotDownloadedFilename()
         {

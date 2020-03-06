@@ -22,8 +22,8 @@
             </Grid.RowDefinitions>
             <Label Grid.Column="0" Grid.Row="0" Content="Drop and/or paste files and folders here" Height="27" Width="420" Background="#FF00FFD8" BorderBrush="Gray" BorderThickness="1"/>
             <ListBox Grid.Column="0" Grid.Row="1" Grid.RowSpan="3" x:Name="lstBoxDragAndDrop" Height="252" Width="420" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop" SelectionMode="Multiple"/>
-            <Button Grid.Column="1" Grid.Row="2" x:Name="btnDragDrop" Content="Go Go Miku Loader" Width="111" Click="BtnDragDrop_Click"/>
-            <Button Grid.Column="1" Grid.Row="3" x:Name="btnGif" Background="Transparent" BorderBrush="Transparent"  Width="150" Height="125">
+            <Button Grid.Column="1" Grid.Row="2" x:Name="btnDragDrop" Margin="10,10,10,10" Content="Go Go Miku Loader" Click="BtnDragDrop_Click"/>
+            <Button Grid.Column="1" Grid.Row="3" x:Name="btnGif" Background="Transparent" BorderBrush="Transparent"  Width="150" Height="150">
                 <Button.Template>
                     <ControlTemplate>
                         <Image x:Name="imgControlGif" gif:AnimationBehavior.SourceUri="/Resources/MikuGifs/__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif"/>

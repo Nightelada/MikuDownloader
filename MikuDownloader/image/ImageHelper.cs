@@ -12,7 +12,7 @@ namespace MikuDownloader
 {
     public static class ImageHelper
     {
-        // searches for image from file
+        // Searches for image from file
         public static async Task<string> ReverseSearchFileHTTP(string filePath)
         {
             FileStream fs = new FileStream(filePath, FileMode.Open);
@@ -55,7 +55,7 @@ namespace MikuDownloader
             }
         }
 
-        // searches for image from URL
+        // Searches for image from URL
         public static async Task<string> ReverseSearchURLHTTP(string fileUrl)
         {
             HttpContent stringContent = new StringContent(fileUrl);
@@ -94,7 +94,7 @@ namespace MikuDownloader
             }
         }
 
-        // makes HTML request for image reverse search using an image file from the computer
+        // Makes HTML request for image reverse search using a local image file
         public async static Task<Tuple<HtmlDocument, string>> GetResponseFromFile(string imagePath)
         {
             var httpResponse = await ReverseSearchFileHTTP(imagePath);
@@ -106,7 +106,7 @@ namespace MikuDownloader
             return tempTuple;
         }
 
-        // makes HTML request for image reverse search using an existing image URL
+        // Makes HTML request for image reverse search using an existing image URL
         public async static Task<Tuple<HtmlDocument, string>> GetResponseFromURL(string imageURL)
         {
             var httpResponse = await ReverseSearchURLHTTP(imageURL);
@@ -119,7 +119,7 @@ namespace MikuDownloader
         }
 
         // MAIN FUNC
-        // this function parses an HTML after reverse-searching from IQDB
+        // This function parses an HTML after reverse-searching from IQDB
         public static ImageData ReverseImageSearch(HtmlDocument htmlDoc, string originalImage, out string status)
         {
             string response = string.Empty;
@@ -265,7 +265,7 @@ namespace MikuDownloader
             return imageContainer;
         }
 
-        // downloads best image from a set of sites provided
+        // Downloads best image from a set of sites provided
         public static string DownloadBestImage(List<ImageDetails> images, string fileName = "")
         {
             // somehow try to distinguish files with differences! (edge tracing)
@@ -287,7 +287,7 @@ namespace MikuDownloader
             }
         }
 
-        // save parsed images based on site priority
+        // Saves parsed images based on site priority
         private static void SavePriorityImages(List<ImageDetails> images, string fileName)
         {
             var folderPath = Utilities.GetMainDownloadDirectory();
@@ -363,13 +363,9 @@ namespace MikuDownloader
             }
         }
 
-        // sorts duplicate files to different folder
-        public static string MarkDuplicateImages(List<ImageData> images, bool? ignoreResolution, out string serializedImages)
+        // Checks a list of images for duplicates and marks it
+        public static void MarkDuplicateImages(List<ImageData> images)
         {
-            string logger = string.Empty;
-            List<ImageData> imagesWithBetterResolution = new List<ImageData>();
-            List<ImageData> imagesWithSameResolution = new List<ImageData>();
-
             // Marks duplicate images
             for (int i = 0; i < images.Count; i++)
             {
@@ -394,155 +390,6 @@ namespace MikuDownloader
                             }
                         }
                     }
-                }
-            }
-
-            List<ImageData> finalDuplicates = new List<ImageData>();
-
-            foreach (ImageData image in images)
-            {
-                if (image.Duplicate)
-                {
-                    finalDuplicates.Add(image);
-                }
-                else if (ignoreResolution == true)
-                {
-                    imagesWithBetterResolution.Add(image);
-                }
-                else
-                {
-                    if (image.HasBetterResolution)
-                    {
-                        imagesWithBetterResolution.Add(image);
-                    }
-                    else if (!image.HasBetterResolution)
-                    {
-                        imagesWithSameResolution.Add(image);
-                    }
-                }
-            }
-
-            List<ImageData> sortedDuplicates = finalDuplicates.OrderBy(x => x.DuplicateIndex).ToList();
-
-            if (sortedDuplicates != null && sortedDuplicates.Count > 0)
-            {
-                int prevIndex = sortedDuplicates.FirstOrDefault().DuplicateIndex;
-                int currIndex = sortedDuplicates.FirstOrDefault().DuplicateIndex;
-                int prefix = 1;
-
-                foreach (ImageData image in sortedDuplicates)
-                {
-                    currIndex = image.DuplicateIndex;
-
-                    if (currIndex != prevIndex)
-                    {
-                        prefix++;
-                    }
-
-                    prevIndex = image.DuplicateIndex;
-
-                    string originalFile = image.OriginalImage;
-                    string folderPath = Path.GetDirectoryName(originalFile);
-
-                    string resolution = Utilities.GetResolution(Path.Combine(originalFile));
-                    logger += string.Format("Image: {0} | Resolution: {1}", originalFile, resolution);
-
-                    try
-                    {
-                        string copyFrom = originalFile;
-                        string duplicateDirectory = string.Empty;
-                        string moveTo = string.Empty;
-
-                        duplicateDirectory = Path.Combine(folderPath, Constants.DuplicatesDirectory);
-                        logger += "\n" + Constants.VeryLongLine + "\n";
-
-                        moveTo = Path.Combine(duplicateDirectory, prefix + "_" + Path.GetFileName(originalFile));
-                        Directory.CreateDirectory(duplicateDirectory);
-
-                        File.Move(copyFrom, moveTo); // Try to move
-                        File.SetLastWriteTime(moveTo, DateTime.Now);
-                    }
-                    catch (IOException ex)
-                    {
-                        logger += string.Format("Failed to move file! {0}\n", ex.Message);
-                    }
-                }
-            }
-
-            serializedImages = MarkImagesForDownload(imagesWithBetterResolution);
-            MarkImagesWithNoChange(imagesWithSameResolution);
-
-            return logger;
-        }
-
-        // creates XML file for downloading images and moves them to different folder
-        private static string MarkImagesForDownload(List<ImageData> images)
-        {
-            string serializedImages = string.Empty;
-            string errorLog = string.Empty;
-
-            if (images != null && images.Count > 0)
-            {
-                foreach (ImageData image in images)
-                {
-                    try
-                    {
-                        string folderPath = Path.GetDirectoryName(image.OriginalImage);
-                        string forDownloadDirectory = Path.Combine(folderPath, Constants.BetterResolutionDirectory);
-
-                        string moveTo = Path.Combine(forDownloadDirectory, Path.GetFileName(image.OriginalImage));
-
-                        Directory.CreateDirectory(forDownloadDirectory);
-
-                        File.Move(image.OriginalImage, moveTo); // Try to move
-                    }
-                    catch (IOException ex)
-                    {
-                        errorLog += string.Format("Failed to move file! {0}\n", ex.Message);
-                    }
-                }
-
-                string xmlStart = "<?xml version=\"1.0\"?>";
-
-                serializedImages = string.Format("{0}\n{1}", xmlStart, SerializingHelper.SerializeImageList(images));
-
-                if (!string.IsNullOrEmpty(errorLog))
-                {
-                    File.AppendAllText("errors.txt", errorLog);
-                }
-            }
-            return serializedImages;
-        }
-
-        // moves files with proper resolution to different folder
-        private static void MarkImagesWithNoChange(List<ImageData> images)
-        {
-            string errorLog = string.Empty;
-
-            if (images != null && images.Count > 0)
-            {
-                foreach (ImageData image in images)
-                {
-                    try
-                    {
-                        string folderPath = Path.GetDirectoryName(image.OriginalImage);
-                        string goodResolutionDirectory = Path.Combine(folderPath, Constants.GoodResolutionDirectory);
-
-                        string moveTo = Path.Combine(goodResolutionDirectory, Path.GetFileName(image.OriginalImage));
-
-                        Directory.CreateDirectory(goodResolutionDirectory);
-
-                        File.Move(image.OriginalImage, moveTo); // Try to move
-                    }
-                    catch (IOException ex)
-                    {
-                        errorLog += string.Format("Failed to move file! {0}\n", ex.Message);
-                    }
-                }
-                
-                if (!string.IsNullOrEmpty(errorLog))
-                {
-                    File.AppendAllText("errors.txt", errorLog);
                 }
             }
         }
