@@ -38,6 +38,13 @@ namespace MikuDownloader.misc
             return currTime + "_" + Constants.NotDownloadedFilename;
         }
 
+        // gets log filename for not downloaded log
+        public static string GetNotDownloadedLinksFilename()
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            return currTime + "_" + Constants.NotDownloadedLinksFilename;
+        }
+
         // gets the name of the Directory in which downloaded files go in
         public static string GetMainDownloadDirectory()
         {

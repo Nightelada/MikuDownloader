@@ -9,7 +9,7 @@ namespace MikuDownloader.image
         public bool Duplicate { get; set; }
         public int DuplicateIndex { get; set; }
         public bool HasBetterResolution { get; set; }
-        public bool HasBeenDownloaded { get; set; }
+        public bool? HasBeenDownloaded { get; set; }
 
         public ImageData()
         {

@@ -140,7 +140,7 @@ namespace MikuDownloader
         }
 
         // checks a list of Image files
-        private async Task DownloadFromFiles(List<string> finalFiles)
+        private async Task<List<ImageData>> DownloadFromFiles(List<string> finalFiles)
         {
             string currStatus = string.Empty;
             int currPic = 0;
@@ -237,6 +237,8 @@ namespace MikuDownloader
                 }
                 File.AppendAllText(Utilities.GetNotDownloadedFilename(), failsString);
             }
+
+            return allImages;
         }
 
         private void BlockAllButtons()
@@ -352,8 +354,21 @@ namespace MikuDownloader
                     string url = Clipboard.GetText();
                     if (!String.IsNullOrEmpty(url))
                     {
-                        Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, url);
-                        dragAndDropItems.Add(tempTuple);
+                        string[] checkMultipleRows = url.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                        if (checkMultipleRows.Count() > 1)
+                        {
+                            foreach (string row in checkMultipleRows)
+                            {
+                                Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, row.Trim());
+                                dragAndDropItems.Add(tempTuple);
+                            }
+                        }
+                        else
+                        {
+                            Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, url);
+                            dragAndDropItems.Add(tempTuple);
+                        }
                     }
                 }
                 // Check if local file or directory has been copied
@@ -426,6 +441,8 @@ namespace MikuDownloader
                 List<string> URLs = new List<string>();
                 List<string> filenames = new List<string>();
 
+                List<ImageData> localImages = new List<ImageData>();
+
                 foreach (Tuple<FileType, string> tuple in dragAndDropItems)
                 {
                     if (tuple.Item1 == FileType.Image)
@@ -455,7 +472,50 @@ namespace MikuDownloader
 
                 if (filenames.Count > 0)
                 {
-                    await DownloadFromFiles(filenames);
+                    localImages = await DownloadFromFiles(filenames);
+
+                    foreach (ImageData image in localImages)
+                    {
+                        string originalFile = image.OriginalImage;
+                        string folderPath = Constants.MainDownloadDirectory;
+                        string loadedDir = Path.Combine(folderPath, Constants.LoadedDirectory);
+                        string notLoadedDir = Path.Combine(folderPath, Constants.NotLoadedDirectory);
+                        string failLoadedDir = Path.Combine(folderPath, Constants.FailLoadedDirectory);
+
+                        List<string> failLoadedURLs = new List<string>(); 
+
+                        try
+                        {
+                            string copyTo = string.Empty;
+
+                            if (image.HasBeenDownloaded == null)
+                            {
+                                copyTo = Path.Combine(notLoadedDir, Path.GetFileName(image.OriginalImage));
+                                Directory.CreateDirectory(notLoadedDir);
+                            }
+                            if (image.HasBeenDownloaded == true)
+                            {
+                                copyTo = Path.Combine(loadedDir, Path.GetFileName(image.OriginalImage));
+                                Directory.CreateDirectory(loadedDir);
+                            }
+                            else if (image.HasBeenDownloaded == false)
+                            {
+                                copyTo = Path.Combine(failLoadedDir, Path.GetFileName(image.OriginalImage));
+                                Directory.CreateDirectory(failLoadedDir);
+                                failLoadedURLs.AddRange(image.GetAllMatchingImages());
+                            }
+                            
+                            File.Copy(image.OriginalImage, copyTo); // Try to move
+
+                        }
+                        catch (IOException ex)
+                        {
+                            string currStatus = txtBlockData.Text;
+                            txtBlockData.Text = string.Format($"{currStatus}\nFailed to move a file! {0}\n", ex.Message);
+                        }
+
+                        File.AppendAllLines(Utilities.GetNotDownloadedLinksFilename(), failLoadedURLs);
+                    }
                 }
             }
             else
