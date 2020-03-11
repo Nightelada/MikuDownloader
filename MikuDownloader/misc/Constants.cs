@@ -38,6 +38,7 @@
         public static string ZerochanErrorMessage = "Zerochan images require registration and must be downloaded manually! Check image post links above!";
 
         public static string MainDirectory = "MikuDownloaderImages";
+        public static string MainLogDirectory = "MikuLogs";
         public static string LoadedDirectory = "Loaded";
         public static string NotLoadedDirectory = "NotLoaded";
         public static string FailLoadedDirectory = "FailLoaded";

@@ -21,7 +21,7 @@
                 <RowDefinition Height=".50*"/>
             </Grid.RowDefinitions>
             <Label Grid.Column="0" Grid.Row="0" Content="Drop and/or paste files and folders here" Height="27" Width="420" Background="#FF00FFD8" BorderBrush="Gray" BorderThickness="1"/>
-            <ListBox Grid.Column="0" Grid.Row="1" Grid.RowSpan="3" x:Name="lstBoxDragAndDrop" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop" SelectionMode="Multiple"/>
+            <ListBox Grid.Column="0" Grid.Row="1" Grid.RowSpan="3" x:Name="lstBoxDragAndDrop" Height="252" Width="420" AllowDrop="True" DragEnter="LstBoxDragAndDrop_DragEnter" Drop="LstBoxDragAndDrop_Drop" SelectionMode="Multiple"/>
             <Button Grid.Column="1" Grid.Row="1" x:Name="btnDragDrop" Margin="10,10,10,10" Content="Go Go Miku Loader" Click="BtnDragDrop_Click"/>
             <Button Grid.Column="1" Grid.Row="2" x:Name="btnGif" Background="Transparent" BorderBrush="Transparent"  Width="150" Height="150">
                 <Button.Template>
@@ -31,7 +31,7 @@
                 </Button.Template>
             </Button>
             <Label Grid.Column="2" Grid.Row="0" Content="Information" Height="27" Width="420" Background="#FF00FFD8" BorderBrush="Gray" BorderThickness="1"/>
-            <TextBox Grid.Column="2" Grid.Row="1" Grid.RowSpan="3" x:Name="txtBlockData" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"/>
+            <TextBox Grid.Column="2" Grid.Row="1" Grid.RowSpan="3" x:Name="txtBlockData" Height="252" Width="420" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"/>
             <Button Grid.Column="1" Grid.Row="3" x:Name="btnLoaderFolder" Content="Loader Folder" Margin="10,10,10,10" Click="BtnLoaderFolder_Click"/>
         </Grid>
     </Viewbox>

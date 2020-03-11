@@ -29,21 +29,27 @@ namespace MikuDownloader.misc
         public static string GetLogFileName()
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd");
-            return currTime + "_" + Constants.MainLogFileName;
+            var fileName = currTime + "_" + Constants.MainLogFileName;
+            Directory.CreateDirectory(Constants.MainLogDirectory);
+            return Path.Combine(Constants.MainLogDirectory, fileName);
         }
 
         // Gets log filename for not downloaded log
         public static string GetNotDownloadedFilename()
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            return currTime + "_" + Constants.NotDownloadedFilename;
+            var fileName = currTime + "_" + Constants.NotDownloadedFilename;
+            Directory.CreateDirectory(Constants.MainLogDirectory);
+            return Path.Combine(Constants.MainLogDirectory, fileName);
         }
 
         // Gets log filename for not downloaded log
         public static string GetNotDownloadedLinksFilename()
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            return currTime + "_" + Constants.NotDownloadedLinksFilename;
+            var fileName = currTime + "_" + Constants.NotDownloadedLinksFilename;
+            Directory.CreateDirectory(Constants.MainLogDirectory);
+            return Path.Combine(Constants.MainLogDirectory, fileName);
         }
 
         // Gets the name of the Directory in which downloaded files go in

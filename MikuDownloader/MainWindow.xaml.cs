@@ -313,9 +313,10 @@ namespace MikuDownloader
                         {
                             ft = FileType.Txt;
                         }
-                        else if (s.EndsWith(".jpg") || s.EndsWith(".jpeg") || s.EndsWith(".jfif")
-                            || s.EndsWith(".tiff") || s.EndsWith(".gif")
-                            || s.EndsWith(".png") || s.EndsWith(".bmp"))
+                        else if (s.EndsWith(".jpg", StringComparison.InvariantCultureIgnoreCase)
+                                || s.EndsWith(".jpeg", StringComparison.InvariantCultureIgnoreCase)
+                                || s.EndsWith(".gif", StringComparison.InvariantCultureIgnoreCase)
+                                || s.EndsWith(".png", StringComparison.InvariantCultureIgnoreCase))
                         {
                             ft = FileType.Image;
                         }
@@ -395,9 +396,10 @@ namespace MikuDownloader
                             {
                                 ft = FileType.Txt;
                             }
-                            else if (s.EndsWith(".jpg") || s.EndsWith(".jpeg") || s.EndsWith(".jfif")
-                                || s.EndsWith(".tiff") || s.EndsWith(".gif")
-                                || s.EndsWith(".png") || s.EndsWith(".bmp"))
+                            else if (s.EndsWith(".jpg", StringComparison.InvariantCultureIgnoreCase) 
+                                || s.EndsWith(".jpeg", StringComparison.InvariantCultureIgnoreCase)
+                                || s.EndsWith(".gif", StringComparison.InvariantCultureIgnoreCase) 
+                                || s.EndsWith(".png", StringComparison.InvariantCultureIgnoreCase))
                             {
                                 ft = FileType.Image;
                             }
@@ -499,6 +501,7 @@ namespace MikuDownloader
                             {
                                 copyTo = Path.Combine(notLoadedDir, Path.GetFileName(image.OriginalImage));
                                 Directory.CreateDirectory(notLoadedDir);
+                                File.Copy(image.OriginalImage, copyTo); // Try to copy
                             }
                             else if (image.HasBeenDownloaded == false)
                             {
@@ -506,9 +509,8 @@ namespace MikuDownloader
                                 copyTo = Path.Combine(failLoadedDir, Path.GetFileName(image.OriginalImage));
                                 Directory.CreateDirectory(failLoadedDir);
                                 failLoadedURLs.AddRange(image.GetAllMatchingImages());
+                                File.Copy(image.OriginalImage, copyTo); // Try to copy
                             }
-                            
-                            File.Copy(image.OriginalImage, copyTo); // Try to copy
                         }
                         catch (IOException ex)
                         {
