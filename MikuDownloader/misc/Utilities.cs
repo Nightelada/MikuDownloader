@@ -1,10 +1,8 @@
 ﻿using HtmlAgilityPack;
-using Microsoft.Win32;
-using Ookii.Dialogs.Wpf;
+using MikuDownloader.image;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
@@ -12,87 +10,64 @@ using System.Net;
 using System.Reflection;
 using System.Resources;
 using System.Windows.Media.Imaging;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.Serialization;
 
 namespace MikuDownloader.misc
 {
     public static class Utilities
     {
-        // gets log timestamp for main log
+        // Gets log timestamp for main log
         public static string GetLogTimestamp()
         {
             var currTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
             return String.Format("{0}\nAttempting to generate list of matching images... : {1}\n", Constants.VeryLongLine, currTime);
         }
 
-        // gets log filename for main log
+        // Gets log filename for main log
         public static string GetLogFileName()
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd");
             return currTime + "_" + Constants.MainLogFileName;
         }
 
-        // gets log filename for not downloaded log
+        // Gets log filename for not downloaded log
         public static string GetNotDownloadedFilename()
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             return currTime + "_" + Constants.NotDownloadedFilename;
         }
 
-        // gets log filename for not downloaded log
+        // Gets log filename for not downloaded log
         public static string GetNotDownloadedLinksFilename()
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             return currTime + "_" + Constants.NotDownloadedLinksFilename;
         }
 
-        // gets the name of the Directory in which downloaded files go in
-        public static string GetMainDownloadDirectory()
+        // Gets the name of the Directory in which downloaded files go in
+        public static string GetLoadedDirectory()
         {
-            var currTime = DateTime.Now.ToString("yyyyMMdd");
-            var downloadDir = Path.Combine(Constants.MainDownloadDirectory, currTime);
-
+            var downloadDir = Path.Combine(Constants.MainDirectory, Constants.LoadedDirectory);
             return downloadDir;
         }
 
-        // browses for .txt file and returns full path
-        public static string BrowseFile(string filter)
+        // Gets the name of the Directory in which downloaded files go in
+        public static string GetNotLoadedDirectory()
         {
-            string filename = string.Empty;
-
-            OpenFileDialog dlg = new OpenFileDialog()
-            {
-                AddExtension = true,
-                Filter = filter
-            };
-
-            bool? result = dlg.ShowDialog();
-
-            if (result == true)
-            {
-                filename = dlg.FileName;
-            }
-
-            return filename;
+            var downloadDir = Path.Combine(Constants.MainDirectory, Constants.NotLoadedDirectory);
+            return downloadDir;
         }
 
-        // browses for directory with images and returns full path
-        public static string BrowseDirectory(string filter)
+        // Gets the name of the Directory in which downloaded files go in
+        public static string GetFailLoadedDirectory()
         {
-            string directory = string.Empty;
-
-            VistaFolderBrowserDialog dlg = new VistaFolderBrowserDialog();
-
-            bool? result = dlg.ShowDialog();
-
-            if (result == true)
-            {
-                directory = dlg.SelectedPath;
-            }
-
-            return directory;
+            var downloadDir = Path.Combine(Constants.MainDirectory, Constants.FailLoadedDirectory);
+            return downloadDir;
         }
 
-        // parses a file full of URLs to a list
+        // Parses a file full of URLs to a list
         public static List<string> ParseURLs(string filepath)
         {
             List<string> finalURLs = new List<string>();
@@ -115,7 +90,7 @@ namespace MikuDownloader.misc
             return finalURLs;
         }
 
-        // checks if the file is image
+        // Checks if the file is image
         public static bool IsImage(string filename)
         {
             if (filename.EndsWith(".txt") || filename.EndsWith(".mp3") || filename.EndsWith(".avi")
@@ -152,7 +127,7 @@ namespace MikuDownloader.misc
             return false;
         }
 
-        // return the resolution of an image from the file system
+        // Returns the resolution of an image from the file system
         public static string GetResolution(string filename)
         {
             string resolution = string.Empty;
@@ -167,7 +142,7 @@ namespace MikuDownloader.misc
             return resolution;
         }
 
-        // compares 2 different resolutions
+        // Compares the resolution values of two images
         private static string CompareResolutions(string resA, string resB, out long numRes)
         {
             string[] strAparams = resA.Split(new char[] { '×', ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -197,7 +172,7 @@ namespace MikuDownloader.misc
             }
         }
 
-        // check if match has better resolution than original image
+        // Checks if a found matching image has better resolution than the original image
         public static bool CheckIfBetterResolution(string originalRes, string matchRes)
         {
             string[] strOrigParams = originalRes.Split(new char[] { '×', ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -225,7 +200,7 @@ namespace MikuDownloader.misc
             }
         }
 
-        // determines maximum resolution from a list of resolutions
+        // Determines maximum resolution from a list of matching images resolutions
         public static string DetermineBestResolution(List<string> stringsToCheck)
         {
             string bestString = string.Empty;
@@ -266,19 +241,15 @@ namespace MikuDownloader.misc
             }
         }
 
-        // parses the post to find the url of the image
+        // Parses the post to find the url of the image
         public static string GetImageURL(string postURL, MatchSource source, out bool status)
         {
             try
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-
                 HtmlWeb web = new HtmlWeb();
-
                 HtmlDocument htmlDoc = web.Load(postURL);
-
                 string imageUrl = string.Empty;
-
                 status = true;
 
                 switch (source)
@@ -324,7 +295,7 @@ namespace MikuDownloader.misc
             }
         }
 
-        // parses danbooru result to get best res link without searching many times
+        // Parses danbooru result to get best resolution link
         private static string SaveDanbooruImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -360,7 +331,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // parses sankaku result to get best res link without searching many times
+        // Parses sankaku result to get best resolution link
         private static string SaveSankakuImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -392,7 +363,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // parses danbooru result to get best res link without searching many times
+        // Parses danbooru result to get best resolution link
         private static string SaveGelbooruImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -422,7 +393,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // parses yande.re result to get best res link without searching many times
+        // Parses yande.re result to get best resolution link
         private static string SaveYandereImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -448,7 +419,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // parses yande.re result to get best res link without searching many times
+        // Parses konachan result to get best resolution link
         private static string SaveKonachanImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -474,7 +445,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // parses zerochan result to get best res link without searching many times
+        // Parses zerochan result to get best resolution link
         private static string SaveZerochanImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -500,7 +471,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // parses e-shuushuu result to get best res link without searching many times
+        // Parses e-shuushuu result to get best resolution link
         private static string SaveEshuushuuImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -527,7 +498,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // parses Anime-Pictures result to get best res link without searching many times
+        // Parses Anime-Pictures result to get best resolution link
         private static string SaveAnimePicturesImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -554,7 +525,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // parses The Anime Gallery result to get best res link without searching many times
+        // Parses The Anime Gallery result to get best resolution link
         private static string SaveTheAnimeGalleryImage(HtmlDocument htmlDoc)
         {
             string origImage = string.Empty;
@@ -582,7 +553,7 @@ namespace MikuDownloader.misc
             return origImage;
         }
 
-        // extracts image name from url for saving on disk
+        // Extracts image name from url for saving on disk
         private static string GetImageNameFromURL(string directory, string URL)
         {
             string name = string.Empty;
@@ -621,7 +592,7 @@ namespace MikuDownloader.misc
             }
         }
 
-        // saves the image from the given url, to the selected path, with the given filename (extension is generated dynamically)
+        // Saves the image from the given url, to the selected path, with the given filename (extension is generated dynamically)
         public static string SaveImage(string directory, string imageURL, string imageName)
         {
             if (string.IsNullOrEmpty(imageName))
@@ -683,16 +654,26 @@ namespace MikuDownloader.misc
             }
         }
 
+        // Parses an image link directly copied from a browser
         public static string GetUrlFromClipboardImage(string htmlText)
         {
             HtmlDocument htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(htmlText);
+            string url = string.Empty;
 
-            string url = htmlDoc.DocumentNode.SelectSingleNode(".//body/img").GetAttributeValue("src",null);
+            try
+            {
+                url = htmlDoc.DocumentNode.SelectSingleNode(".//body/img").GetAttributeValue("src", null);
+            }
+            catch (Exception ex)
+            {
+                url = null;
+            }
 
             return url;
         }
 
+        // Returns a list of all images in the folder, including subdirectories
         public static List<string> GetAllImagesFromFolder(string directory)
         {
             List<string> finalImages = new List<string>();
@@ -710,7 +691,8 @@ namespace MikuDownloader.misc
             return finalImages;
         }
 
-        public static string[] GetResourcesUnder(string folder)
+        // Returns a list of all resources inside the resource folder
+        public static List<string> GetResourcesUnder(string folder)
         {
             folder = folder.ToLower() + "/";
 
@@ -725,7 +707,35 @@ namespace MikuDownloader.misc
                 where theme.StartsWith(folder)
                 select theme.Substring(folder.Length);
 
-            return resources.ToArray();
+            return resources.ToList();
+        }
+
+        // Serializes ImageData objects to XML
+        public static string SerializeImageList(List<ImageData> serializableObjectList)
+        {
+            var doc = new XDocument();
+
+            using (XmlWriter xmlStream = doc.CreateWriter())
+            {
+                XmlSerializer xSer = new XmlSerializer(typeof(List<ImageData>));
+
+                xSer.Serialize(xmlStream, serializableObjectList);
+            }
+
+            return doc.ToString();
+        }
+
+        // Deserializes ImageData object from XML
+        public static List<ImageData> DeserializeImageList(string xmlDoc)
+        {
+            using (StringReader sr = new StringReader(xmlDoc))
+            {
+                XmlSerializer xSer = new XmlSerializer(typeof(List<ImageData>));
+
+                var myObject = xSer.Deserialize(sr);
+
+                return (List<ImageData>)myObject;
+            }
         }
     }
 }

@@ -153,7 +153,7 @@ namespace MikuDownloader
                     {
                         if (File.Exists(originalImage))
                         {
-                            response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain);
+                            response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain, Constants.Ascii2dMain);
 
                             status = response;
                             return null;
@@ -165,11 +165,13 @@ namespace MikuDownloader
                                 var sauceNao = String.Format("{0}{1}", Constants.SauceNAO, originalImage);
                                 var tinEye = String.Format("{0}{1}", Constants.TinEye, originalImage);
                                 var google = String.Format("{0}{1}&safe=off", Constants.Google, originalImage);
-                                response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n", sauceNao, tinEye, google);
+                                var ascii2d = String.Format("{0}{1}", Constants.Ascii2d, originalImage);
+
+                                response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", sauceNao, tinEye, google, ascii2d);
                             }
                             else
                             {
-                                response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain);
+                                response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain, Constants.Ascii2dMain);
                             }
                             status = response;
                             return null;
@@ -290,7 +292,7 @@ namespace MikuDownloader
         // Saves parsed images based on site priority
         private static void SavePriorityImages(List<ImageDetails> images, string fileName)
         {
-            var folderPath = Utilities.GetMainDownloadDirectory();
+            var folderPath = Utilities.GetLoadedDirectory();
 
             bool flagSuccessfulDownload = false;
             int oldPriority = 1;

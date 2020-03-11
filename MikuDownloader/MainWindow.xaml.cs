@@ -4,6 +4,7 @@ using MikuDownloader.misc;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,7 +40,7 @@ namespace MikuDownloader
             };
         }
 
-        // checks a list of Image URLs
+        // Checks a list of Image URLs
         private async Task DownloadFromURLs(List<string> finalUrls)
         {
             string currStatus = string.Empty;
@@ -139,7 +140,7 @@ namespace MikuDownloader
             }
         }
 
-        // checks a list of Image files
+        // Checks a list of Image files
         private async Task<List<ImageData>> DownloadFromFiles(List<string> finalFiles)
         {
             string currStatus = string.Empty;
@@ -241,6 +242,7 @@ namespace MikuDownloader
             return allImages;
         }
 
+        // Makes all UI buttons not active
         private void BlockAllButtons()
         {
             foreach (Button b in buttonsList)
@@ -253,6 +255,7 @@ namespace MikuDownloader
             }
         }
 
+        // Makes all UI buttons active
         private void ReleaseAllButtons()
         {
             foreach (Button b in buttonsList)
@@ -265,6 +268,7 @@ namespace MikuDownloader
             }
         }
 
+        // Allows files to be dropped inside the list box
         private void LstBoxDragAndDrop_DragEnter(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
@@ -277,6 +281,7 @@ namespace MikuDownloader
             }
         }
 
+        // Performs different action based on type of file that is dropped inside the list box
         private void LstBoxDragAndDrop_Drop(object sender, DragEventArgs e)
         {
             FileType ft = FileType.Other;
@@ -327,6 +332,7 @@ namespace MikuDownloader
 
             if (!String.IsNullOrEmpty(draggedText))
             {
+                // checks to see if text is multiple lines
                 string[] splitDraggedText = draggedText.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
                 ft = FileType.URL;
 
@@ -341,6 +347,7 @@ namespace MikuDownloader
             }
         }
 
+        // Performs different action when items are pasted inside application or the Delete key is pressed while items are selected from the list box
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
@@ -431,6 +438,7 @@ namespace MikuDownloader
             }
         }
 
+        // Checks and downloads all images from the items in the list box
         private async void BtnDragDrop_Click(object sender, RoutedEventArgs e)
         {
             BlockAllButtons();
@@ -473,14 +481,13 @@ namespace MikuDownloader
                 if (filenames.Count > 0)
                 {
                     localImages = await DownloadFromFiles(filenames);
+                    string notDownloadedFilename = Utilities.GetNotDownloadedLinksFilename();
 
                     foreach (ImageData image in localImages)
                     {
                         string originalFile = image.OriginalImage;
-                        string folderPath = Constants.MainDownloadDirectory;
-                        string loadedDir = Path.Combine(folderPath, Constants.LoadedDirectory);
-                        string notLoadedDir = Path.Combine(folderPath, Constants.NotLoadedDirectory);
-                        string failLoadedDir = Path.Combine(folderPath, Constants.FailLoadedDirectory);
+                        string notLoadedDir = Utilities.GetNotLoadedDirectory();
+                        string failLoadedDir = Utilities.GetFailLoadedDirectory();
 
                         List<string> failLoadedURLs = new List<string>(); 
 
@@ -493,20 +500,15 @@ namespace MikuDownloader
                                 copyTo = Path.Combine(notLoadedDir, Path.GetFileName(image.OriginalImage));
                                 Directory.CreateDirectory(notLoadedDir);
                             }
-                            if (image.HasBeenDownloaded == true)
-                            {
-                                copyTo = Path.Combine(loadedDir, Path.GetFileName(image.OriginalImage));
-                                Directory.CreateDirectory(loadedDir);
-                            }
                             else if (image.HasBeenDownloaded == false)
                             {
+                                copyTo = Utilities.GetFailLoadedDirectory();
                                 copyTo = Path.Combine(failLoadedDir, Path.GetFileName(image.OriginalImage));
                                 Directory.CreateDirectory(failLoadedDir);
                                 failLoadedURLs.AddRange(image.GetAllMatchingImages());
                             }
                             
-                            File.Copy(image.OriginalImage, copyTo); // Try to move
-
+                            File.Copy(image.OriginalImage, copyTo); // Try to copy
                         }
                         catch (IOException ex)
                         {
@@ -514,7 +516,7 @@ namespace MikuDownloader
                             txtBlockData.Text = string.Format($"{currStatus}\nFailed to move a file! {0}\n", ex.Message);
                         }
 
-                        File.AppendAllLines(Utilities.GetNotDownloadedLinksFilename(), failLoadedURLs);
+                        File.AppendAllLines(notDownloadedFilename, failLoadedURLs);
                     }
                 }
             }
@@ -524,9 +526,9 @@ namespace MikuDownloader
             }
 
             ReleaseAllButtons();
-
         }
 
+        // Changes the gif image to a random one from Resources
         private void SetRandomGif()
         {
             Random random = new Random();
@@ -537,13 +539,27 @@ namespace MikuDownloader
             var files = Utilities.GetResourcesUnder("Resources/MikuGifs");
 
             int randomIndex = random.Next(0, files.Count() - 1);
-
-
+            
             var file = files.ElementAt(randomIndex);
 
             var uri = new Uri("pack://application:,,,/Resources/Mikugifs/" + file);
 
             AnimationBehavior.SetSourceUri(myControl, uri);
+        }
+
+        // Open the main directory if it exists
+        private void BtnLoaderFolder_Click(object sender, RoutedEventArgs e)
+        {
+            string mainDirPath = Constants.MainDirectory;
+
+            if (Directory.Exists(mainDirPath))
+            {
+                Process.Start("explorer.exe", mainDirPath);
+            }
+            else
+            {
+                txtBlockData.Text = "No images have been loaded yet!";
+            }
         }
     }
 }
