@@ -3,7 +3,6 @@ using MikuDownloader.image;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -21,8 +20,7 @@ namespace MikuDownloader.misc
         // Gets log timestamp for main log
         public static string GetLogTimestamp()
         {
-            var currTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
-            return String.Format("{0}\nAttempting to generate list of matching images... : {1}\n", Constants.VeryLongLine, currTime);
+            return String.Format("{0}\nAttempting to generate list of matching images... : {1}\n", Constants.VeryLongLine, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
         }
 
         // Gets log filename for main log
@@ -55,22 +53,19 @@ namespace MikuDownloader.misc
         // Gets the name of the Directory in which downloaded files go in
         public static string GetLoadedDirectory()
         {
-            var downloadDir = Path.Combine(Constants.MainDirectory, Constants.LoadedDirectory);
-            return downloadDir;
+            return Path.Combine(Constants.MainDirectory, Constants.LoadedDirectory);
         }
 
         // Gets the name of the Directory in which downloaded files go in
         public static string GetNotLoadedDirectory()
         {
-            var downloadDir = Path.Combine(Constants.MainDirectory, Constants.NotLoadedDirectory);
-            return downloadDir;
+            return Path.Combine(Constants.MainDirectory, Constants.NotLoadedDirectory);
         }
 
         // Gets the name of the Directory in which downloaded files go in
         public static string GetFailLoadedDirectory()
         {
-            var downloadDir = Path.Combine(Constants.MainDirectory, Constants.FailLoadedDirectory);
-            return downloadDir;
+            return Path.Combine(Constants.MainDirectory, Constants.FailLoadedDirectory);
         }
 
         // Parses a file full of URLs to a list
@@ -562,7 +557,7 @@ namespace MikuDownloader.misc
         // Extracts image name from url for saving on disk
         private static string GetImageNameFromURL(string directory, string URL)
         {
-            string name = string.Empty;
+            string name;
 
             string currFolder = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -571,40 +566,24 @@ namespace MikuDownloader.misc
             string[] tempStringArray = URL.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             name = tempStringArray.Last();
 
-            if (name.Contains(".jpg"))
-            {
-                name = name.Remove(name.IndexOf(".jpg"));
-            }
-            else if (name.Contains(".png"))
-            {
-                name = name.Remove(name.IndexOf(".png"));
-            }
-            else if (name.Contains(".gif"))
-            {
-                name = name.Remove(name.IndexOf(".gif"));
-            }
-            else if (name.Contains(".jpeg"))
-            {
-                name = name.Remove(name.IndexOf(".jpeg"));
-            }
-
             if (name.Length > allowedSymbols)
             {
-                return name.Substring(0, allowedSymbols);
+                name = name.Substring(0, allowedSymbols);
             }
-            else
-            {
-                return name;
-            }
+
+            return name.Replace("%20", " ");
         }
 
         // Saves the image from the given url, to the selected path, with the given filename (extension is generated dynamically)
-        public static string SaveImage(string directory, string imageURL, string imageName)
+        public static void SaveImage(string directory, string imageURL, string imageName)
         {
             if (string.IsNullOrEmpty(imageName))
             {
                 imageName = GetImageNameFromURL(directory, imageURL);
-                imageName = imageName.Replace("%20", " ");
+            }
+            else
+            {
+                throw new InvalidDataException("Image name is empty!");
             }
 
             using (WebClient webClient = new WebClient())
@@ -618,46 +597,36 @@ namespace MikuDownloader.misc
                 }
                 catch (WebException we)
                 {
-                    throw new Exception("Could not download image!" + we.Message);
+                    throw new Exception("Could not download image! " + we.Message);
                 }
 
-                using (MemoryStream mem = new MemoryStream(data))
+                try
                 {
-                    using (var yourImage = System.Drawing.Image.FromStream(mem))
-                    {
-                        ImageFormat iff = null;
-                        string filename = string.Empty;
+                    string imagePath = Path.Combine(directory, imageName);
+                    Directory.CreateDirectory(directory);
 
-                        if (ImageFormat.Jpeg.Equals(yourImage.RawFormat))
-                        {
-                            iff = ImageFormat.Jpeg;
-                            filename = imageName + ".jpg";
-                        }
-                        else if (ImageFormat.Png.Equals(yourImage.RawFormat))
-                        {
-                            iff = ImageFormat.Png;
-                            filename = imageName + ".png";
-                        }
-                        else if (ImageFormat.Gif.Equals(yourImage.RawFormat))
-                        {
-                            iff = ImageFormat.Gif;
-                            filename = imageName + ".gif";
-                        }
-                        else
-                        {
-                            throw new ArgumentException("Invalid image hash detected! Make sure the image to download is in format of png, jpg or gif!");
-                        }
-
-                        string imagePath = Path.Combine(directory, filename);
-
-                        Directory.CreateDirectory(directory);
-
-                        yourImage.Save(imagePath, iff);
-
-                        return imagePath;
-                    }
+                    File.WriteAllBytes(imagePath, data);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Could not save image! " + ex.Message);
                 }
             }
+        }
+
+        // TODO: Fix this shit
+        public static bool CheckIfRealUrl(string urlToCheck)
+        {
+            return (urlToCheck.Contains("http://") ||
+                urlToCheck.Contains("https://") ||
+                urlToCheck.Contains("www.") ||
+                urlToCheck.Contains(".jpg") ||
+                urlToCheck.Contains(".jpeg") ||
+                urlToCheck.Contains(".jfif") ||
+                urlToCheck.Contains(".png") ||
+                urlToCheck.Contains(".gif") ||
+                urlToCheck.Contains(".mp4") ||
+                urlToCheck.Contains(".webm"));
         }
 
         // Parses an image link directly copied from a browser

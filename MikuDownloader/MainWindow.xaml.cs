@@ -123,6 +123,15 @@ namespace MikuDownloader
                     File.AppendAllText(Utilities.GetLogFileName(), Utilities.GetLogTimestamp() + status);
                 }
             }
+
+            foreach (ImageData image in allImages)
+            {
+                if (image.HasBeenDownloaded == null || image.HasBeenDownloaded == true)
+                {
+                    Utilities.SaveImage(Utilities.GetNotLoadedDirectory(), image.OriginalImage, string.Empty);
+                }
+            }
+
             currStatus = $"{prevText}\n\nSuccessful downloads: {downloadedCount}\nFailed downloads: {failedCount}\nNo matching images found: {notFoundCount}";
             txtBlockData.Text = $"Finished checking image list! Check log for more info!\n{currStatus}";
             if (failedCount > 0 || notFoundCount > 0)
@@ -368,13 +377,30 @@ namespace MikuDownloader
                         {
                             foreach (string row in checkMultipleRows)
                             {
-                                Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, row.Trim());
+                                Tuple<FileType, string> tempTuple;
+                                if (Utilities.CheckIfRealUrl(row))
+                                {
+                                    tempTuple = new Tuple<FileType, string>(FileType.URL, row.Trim());
+                                }
+                                else
+                                {
+                                    tempTuple = new Tuple<FileType, string>(FileType.Other, row.Trim());
+                                }
                                 dragAndDropItems.Add(tempTuple);
                             }
                         }
                         else
                         {
-                            Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, url);
+                            Tuple<FileType, string> tempTuple;
+
+                            if (Utilities.CheckIfRealUrl(url))
+                            {
+                                tempTuple = new Tuple<FileType, string>(FileType.URL, url);
+                            }
+                            else
+                            {
+                                tempTuple = new Tuple<FileType, string>(FileType.Other, url);
+                            }
                             dragAndDropItems.Add(tempTuple);
                         }
                     }
@@ -561,6 +587,20 @@ namespace MikuDownloader
             else
             {
                 txtBlockData.Text = "No images have been loaded yet!";
+            }
+        }
+
+        private void btnLogsFolder_Click(object sender, RoutedEventArgs e)
+        {
+            string mainLogDir = Constants.MainLogDirectory;
+
+            if (Directory.Exists(mainLogDir))
+            {
+                Process.Start("explorer.exe", mainLogDir);
+            }
+            else
+            {
+                txtBlockData.Text = "No logs have been recorded yet!";
             }
         }
     }
