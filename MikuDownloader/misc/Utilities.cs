@@ -20,7 +20,7 @@ namespace MikuDownloader.misc
         // Gets log timestamp for main log
         public static string GetLogTimestamp()
         {
-            return String.Format("{0}\nAttempting to generate list of matching images... : {1}\n", Constants.VeryLongLine, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
+            return string.Format("{0}\nAttempting to generate list of matching images... : {1}\n", Constants.VeryLongLine, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
         }
 
         // Gets log filename for main log
@@ -138,7 +138,7 @@ namespace MikuDownloader.misc
                 var decoder = BitmapDecoder.Create(imageStream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.Default);
                 var height = decoder.Frames[0].PixelHeight;
                 var width = decoder.Frames[0].PixelWidth;
-                resolution = String.Format("{0}{1}{2}", width, '×', height);
+                resolution = string.Format("{0}{1}{2}", width, '×', height);
             }
             return resolution;
         }
@@ -315,7 +315,7 @@ namespace MikuDownloader.misc
                         }
                         catch (Exception ex)
                         {
-                            throw new ArgumentException("Error when parsing danbooru url! Image was probably deleted or removed!\n");
+                            throw new ArgumentException(string.Format("Error when parsing danbooru url! Image was probably deleted or removed!\n{0}\n", ex.Message));
                         }
                     }
                 }
@@ -358,7 +358,7 @@ namespace MikuDownloader.misc
             {
                 throw new ArgumentException("Error when parsing sankaku url! Post was deleted/removed!");
             }
-            origImage = String.Format("https:{0}", origImage);
+            origImage = string.Format("https:{0}", origImage);
             origImage = origImage.Replace("&amp;", "&");
 
             return origImage;
@@ -494,7 +494,7 @@ namespace MikuDownloader.misc
             {
                 throw new ArgumentException("Error when parsing e-shuushuu url! Post was deleted/removed!");
             }
-            origImage = String.Format("http://e-shuushuu.net/{0}", origImage);
+            origImage = string.Format("http://e-shuushuu.net/{0}", origImage);
 
             return origImage;
         }
@@ -521,7 +521,7 @@ namespace MikuDownloader.misc
             {
                 throw new ArgumentException("Error when parsing anime-pictures url! Post was deleted/removed!");
             }
-            origImage = String.Format("https://anime-pictures.net{0}", origImage);
+            origImage = string.Format("https://anime-pictures.net{0}", origImage);
 
             return origImage;
         }
@@ -549,7 +549,7 @@ namespace MikuDownloader.misc
                 throw new ArgumentException("Error when parsing the anime gallery url! Post was deleted/removed!");
 
             }
-            origImage = String.Format("www.theanimegallery.com{0}", origImage);
+            origImage = string.Format("www.theanimegallery.com{0}", origImage);
 
             return origImage;
         }
@@ -565,6 +565,9 @@ namespace MikuDownloader.misc
 
             string[] tempStringArray = URL.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             name = tempStringArray.Last();
+
+            tempStringArray = name.Split(new string[] { "?_", "?e=", "?if=" }, StringSplitOptions.RemoveEmptyEntries);
+            name = tempStringArray.First();
 
             if (name.Length > allowedSymbols)
             {
@@ -634,7 +637,7 @@ namespace MikuDownloader.misc
         {
             HtmlDocument htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(htmlText);
-            string url = string.Empty;
+            string url;
 
             try
             {

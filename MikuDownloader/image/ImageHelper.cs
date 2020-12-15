@@ -124,13 +124,13 @@ namespace MikuDownloader
         {
             string response = string.Empty;
 
-            response = String.Format("Original image: {0}\n", originalImage);
+            response = string.Format("Original image: {0}\n", originalImage);
 
             // check if error when loading image
             var err = htmlDoc.DocumentNode.SelectSingleNode(".//div[@class='err']");
             if (err != null)
             {
-                response += String.Format("Image search failed!\n{0}\nSupported file types are JPEG, PNG and GIF\nMaximum file size: 8192 KB\nMaximum image dimensions: 7500x7500\n",
+                response += string.Format("Image search failed!\n{0}\nSupported file types are JPEG, PNG and GIF\nMaximum file size: 8192 KB\nMaximum image dimensions: 7500x7500\n",
                     err.InnerText);
                 status = response;
                 return null;
@@ -153,7 +153,7 @@ namespace MikuDownloader
                     {
                         if (File.Exists(originalImage))
                         {
-                            response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain, Constants.Ascii2dMain);
+                            response += string.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain, Constants.Ascii2dMain);
 
                             status = response;
                             return null;
@@ -162,16 +162,16 @@ namespace MikuDownloader
                         {
                             if (!originalImage.Contains(Constants.FacebookTempURL))
                             {
-                                var sauceNao = String.Format("{0}{1}", Constants.SauceNAO, originalImage);
-                                var tinEye = String.Format("{0}{1}", Constants.TinEye, originalImage);
-                                var google = String.Format("{0}{1}&safe=off", Constants.Google, originalImage);
-                                var ascii2d = String.Format("{0}{1}", Constants.Ascii2d, originalImage);
+                                var sauceNao = string.Format("{0}{1}", Constants.SauceNAO, originalImage);
+                                var tinEye = string.Format("{0}{1}", Constants.TinEye, originalImage);
+                                var google = string.Format("{0}{1}&safe=off", Constants.Google, originalImage);
+                                var ascii2d = string.Format("{0}{1}", Constants.Ascii2d, originalImage);
 
-                                response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", sauceNao, tinEye, google, ascii2d);
+                                response += string.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", sauceNao, tinEye, google, ascii2d);
                             }
                             else
                             {
-                                response += String.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain, Constants.Ascii2dMain);
+                                response += string.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain, Constants.Ascii2dMain);
                             }
                             status = response;
                             return null;
@@ -225,7 +225,7 @@ namespace MikuDownloader
                 try
                 {
                     string bestResoltuion = Utilities.DetermineBestResolution(resolutions);
-                    response += String.Format("Best resolution found is: {0}\n", bestResoltuion);
+                    response += string.Format("Best resolution found is: {0}\n", bestResoltuion);
 
                     if (imagesList.Count > 0)
                     {
@@ -234,11 +234,11 @@ namespace MikuDownloader
                             if (image.Resolution.Equals(bestResoltuion))
                             {
                                 bestImages.Add(image);
-                                response += String.Format("{0}: {1} Similarity: {2} Rating: {3}\n", image.MatchType.ToString(), image.PostURL, image.Similarity, image.MatchRating.ToString());
+                                response += string.Format("{0}: {1} Similarity: {2} Rating: {3}\n", image.MatchType.ToString(), image.PostURL, image.Similarity, image.MatchRating.ToString());
                             }
                             if (image.Resolution.Equals("Unavailable"))
                             {
-                                response += String.Format("Weird resolution! Check: {0}\n", image.PostURL);
+                                response += string.Format("Weird resolution! Check: {0}\n", image.PostURL);
                             }
                         }
                     }
@@ -251,7 +251,7 @@ namespace MikuDownloader
                 }
                 catch (ArgumentException ae)
                 {
-                    response += String.Format("Could not determine best resolution! {0}\n", ae.Message);
+                    response += string.Format("Could not determine best resolution! {0}\n", ae.Message);
                 }
             }
             else
@@ -356,6 +356,7 @@ namespace MikuDownloader
                 catch (Exception ex)
                 {
                     errorMessages += ex.Message + "\n";
+                    flagSuccessfulDownload = false;
                 }
             }
 

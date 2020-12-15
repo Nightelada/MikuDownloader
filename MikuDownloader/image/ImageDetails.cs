@@ -26,7 +26,7 @@ namespace MikuDownloader
         {
             if (!post.Contains("https:") && !post.Contains("http:"))
             {
-                PostURL = String.Format("https:{0}", post);
+                PostURL = string.Format("https:{0}", post);
             }
             else
             {
@@ -51,7 +51,7 @@ namespace MikuDownloader
             string[] strAparams = Resolution.Split(new char[] { '×', ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (strAparams != null && strAparams.Length > 2)
             {
-                Resolution = String.Format("{0}{1}{2}", strAparams[0], '×', strAparams[1]);
+                Resolution = string.Format("{0}{1}{2}", strAparams[0], '×', strAparams[1]);
                 SetMatchRating(strAparams.Last());
             }
             else
@@ -64,7 +64,7 @@ namespace MikuDownloader
             string[] strBparams = Similarity.Split(new char[] { '%', ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (strAparams != null && strAparams.Length > 1)
             {
-                Similarity = String.Format("{0}{1}", strBparams[0], '%');
+                Similarity = string.Format("{0}{1}", strBparams[0], '%');
             }
             else
             {

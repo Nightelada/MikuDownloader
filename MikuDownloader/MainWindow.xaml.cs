@@ -111,11 +111,11 @@ namespace MikuDownloader
                     failedToDownloadImages += imageURL + "\n";
                     if (ex.InnerException != null)
                     {
-                        status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                        status += string.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
                     }
                     else
                     {
-                        status += String.Format("Failed to download image!\n{0}\n", ex.Message);
+                        status += string.Format("Failed to download image!\n{0}\n", ex.Message);
                     }
                 }
                 finally
@@ -126,9 +126,23 @@ namespace MikuDownloader
 
             foreach (ImageData image in allImages)
             {
-                if (image.HasBeenDownloaded == null || image.HasBeenDownloaded == true)
+                if (image.HasBeenDownloaded == null || image.HasBeenDownloaded == false)
                 {
-                    Utilities.SaveImage(Utilities.GetNotLoadedDirectory(), image.OriginalImage, string.Empty);
+                    try
+                    {
+                        Utilities.SaveImage(Utilities.GetNotLoadedDirectory(), image.OriginalImage, string.Empty);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.InnerException != null)
+                        {
+                            File.AppendAllText(Utilities.GetLogFileName(), string.Format("Failed to download image from original URL!\n{0}\n{1}\n{2}\n", image.OriginalImage, ex.Message, ex.InnerException.Message));
+                        }
+                        else
+                        {
+                            File.AppendAllText(Utilities.GetLogFileName(), string.Format("Failed to download image from original URL!\n{0}\n{1}\n", image.OriginalImage, ex.Message));
+                        }
+                    }
                 }
             }
 
@@ -220,11 +234,11 @@ namespace MikuDownloader
                     failedToDownloadImages += imageFile + "\n";
                     if (ex.InnerException != null)
                     {
-                        status += String.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                        status += string.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
                     }
                     else
                     {
-                        status += String.Format("Failed to download image!\n{0}\n", ex.Message);
+                        status += string.Format("Failed to download image!\n{0}\n", ex.Message);
                     }
                 }
                 finally
@@ -499,7 +513,7 @@ namespace MikuDownloader
                     }
                 }
 
-                txtBlockData.Text = String.Format($"Finished checking items:\nTotal URLs: {URLs.Count}\nTotal files to check: {filenames.Count}");
+                txtBlockData.Text = string.Format($"Finished checking items:\nTotal URLs: {URLs.Count}\nTotal files to check: {filenames.Count}");
 
                 if (URLs.Count > 0)
                 {
