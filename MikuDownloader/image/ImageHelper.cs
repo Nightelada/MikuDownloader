@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using MikuDownloader.enums;
 using MikuDownloader.image;
 using MikuDownloader.misc;
 using System;
@@ -13,7 +14,7 @@ namespace MikuDownloader
     public static class ImageHelper
     {
         // Searches for image from file
-        public static async Task<string> ReverseSearchFileHTTP(string filePath)
+        private static async Task<string> ReverseSearchFileHTTP(string filePath)
         {
             FileStream fs = new FileStream(filePath, FileMode.Open);
 
@@ -56,7 +57,7 @@ namespace MikuDownloader
         }
 
         // Searches for image from URL
-        public static async Task<string> ReverseSearchURLHTTP(string fileUrl)
+        private static async Task<string> ReverseSearchURLHTTP(string fileUrl)
         {
             HttpContent stringContent = new StringContent(fileUrl);
 
@@ -120,7 +121,7 @@ namespace MikuDownloader
 
         // MAIN FUNC
         // This function parses an HTML after reverse-searching from IQDB
-        public static ImageData ReverseImageSearch(HtmlDocument htmlDoc, string originalImage, out string status)
+        public static ImageData ReverseImageSearch(HtmlDocument htmlDoc, string originalImage, FileType originalImageType, out string status)
         {
             string response = string.Empty;
 
@@ -151,7 +152,7 @@ namespace MikuDownloader
                     // if no best match is found - return alternative links
                     else if (node.InnerText.Contains("No relevant"))
                     {
-                        if (File.Exists(originalImage))
+                        if (File.Exists(originalImage) || originalImage.Contains(Constants.FacebookTempURL))
                         {
                             response += string.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain, Constants.Ascii2dMain);
 
@@ -160,19 +161,13 @@ namespace MikuDownloader
                         }
                         else
                         {
-                            if (!originalImage.Contains(Constants.FacebookTempURL))
-                            {
-                                var sauceNao = string.Format("{0}{1}", Constants.SauceNAO, originalImage);
-                                var tinEye = string.Format("{0}{1}", Constants.TinEye, originalImage);
-                                var google = string.Format("{0}{1}&safe=off", Constants.Google, originalImage);
-                                var ascii2d = string.Format("{0}{1}", Constants.Ascii2d, originalImage);
+                            var sauceNao = string.Format("{0}{1}", Constants.SauceNAO, originalImage);
+                            var tinEye = string.Format("{0}{1}", Constants.TinEye, originalImage);
+                            var google = string.Format("{0}{1}&safe=off", Constants.Google, originalImage);
+                            var ascii2d = string.Format("{0}{1}", Constants.Ascii2d, originalImage);
 
-                                response += string.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", sauceNao, tinEye, google, ascii2d);
-                            }
-                            else
-                            {
-                                response += string.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", Constants.SauceNAOMain, Constants.TinEyeMain, Constants.GoogleMain, Constants.Ascii2dMain);
-                            }
+                            response += string.Format("No Relevant images found!\nCheck below URLs:\n{0}\n{1}\n{2}\n{3}\n", sauceNao, tinEye, google, ascii2d);
+
                             status = response;
                             return null;
                         }
@@ -192,7 +187,7 @@ namespace MikuDownloader
             List<string> resolutions = new List<string>();
             List<ImageDetails> imagesList = new List<ImageDetails>();
             List<ImageDetails> bestImages = new List<ImageDetails>();
-            ImageData imageContainer = new ImageData(originalImage);
+            ImageData imageContainer = new ImageData(originalImage, originalImageType);
 
             if (matchNodes != null)
             {
@@ -234,17 +229,21 @@ namespace MikuDownloader
                             if (image.Resolution.Equals(bestResoltuion))
                             {
                                 bestImages.Add(image);
-                                response += string.Format("{0}: {1} Similarity: {2} Rating: {3}\n", image.MatchType.ToString(), image.PostURL, image.Similarity, image.MatchRating.ToString());
+                                response += string.Format("{0}: {1} Similarity: {2} Rating: {3} Resolution: {4}\n", image.MatchType.ToString(), image.PostURL, image.Similarity, image.MatchRating.ToString(), image.Resolution.ToString());
                             }
-                            if (image.Resolution.Equals("Unavailable"))
+                            else if (image.Resolution.Equals("Unavailable"))
                             {
                                 response += string.Format("Weird resolution! Check: {0}\n", image.PostURL);
+                            }
+                            else
+                            {
+                                response += string.Format("{0}: {1} Similarity: {2} Rating: {3} Resolution: {4}\n", image.MatchType.ToString(), image.PostURL, image.Similarity, image.MatchRating.ToString(), image.Resolution.ToString());
                             }
                         }
                     }
                     else
                     {
-                        response += "Image search failed! You should not see this code!\n";
+                        response += "Image search failed! If you see this contact the developer!\n";
                         status = response;
                         return null;
                     }
@@ -350,8 +349,6 @@ namespace MikuDownloader
                     {
                         Utilities.SaveImage(folderPath, imageUrl, fileName);
                     }
-                    // anti-ban
-                    Task.Delay(500);
                 }
                 catch (Exception ex)
                 {

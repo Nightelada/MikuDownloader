@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using MikuDownloader.enums;
+using System.Collections.Generic;
 
 namespace MikuDownloader.image
 {
     public class ImageData
     {
         public string OriginalImage { get; set; }
+        public FileType OriginalImageType { get; set; }
         public List<ImageDetails> MatchingImages { get; set; }
         public bool Duplicate { get; set; }
         public int DuplicateIndex { get; set; }
@@ -16,9 +18,10 @@ namespace MikuDownloader.image
             MatchingImages = new List<ImageDetails>();
         }
 
-        public ImageData(string origImage)
+        public ImageData(string origImage, FileType fileType)
         {
             OriginalImage = origImage;
+            OriginalImageType = fileType;
             MatchingImages = new List<ImageDetails>();
         }
 

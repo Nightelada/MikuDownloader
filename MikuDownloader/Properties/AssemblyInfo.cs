@@ -8,11 +8,11 @@ using System.Windows;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("MikuDownloader")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Searches for images on iqdb.net")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("ppy-trans")]
 [assembly: AssemblyProduct("MikuDownloader")]
-[assembly: AssemblyCopyright("Copyright © Pepkata 2017")]
+[assembly: AssemblyCopyright("Copyright © Pepkata 2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -51,5 +51,5 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.7.9.39")]
-[assembly: AssemblyFileVersion("1.7.9.39")]
+[assembly: AssemblyVersion("2.0.1.182")]
+[assembly: AssemblyFileVersion("2.0.1.182")]
