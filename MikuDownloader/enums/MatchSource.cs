@@ -8,7 +8,6 @@
             Gelbooru,
             SankakuChannel,
             Eshuushuu,
-            TheAnimeGallery,
             Zerochan,
             AnimePictures
     }

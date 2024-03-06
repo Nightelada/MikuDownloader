@@ -1,5 +1,11 @@
-﻿using HtmlAgilityPack;
+﻿using FileTypeChecker.Abstracts;
+using FileTypeChecker.Extensions;
+using FileTypeChecker;
+using HtmlAgilityPack;
 using MikuDownloader.image;
+using MikuDownloader.misc.rest;
+using Newtonsoft.Json;
+using RestSharp;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,15 +26,31 @@ namespace MikuDownloader.misc
         // Logs data in the searching function
         public static void LogSearch(string logText)
         {
-            string fullLog = $"{Constants.VeryLongLine}\nLogSearch {DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}\n{Constants.GeneralLogMessage}\n{logText}";
-            File.AppendAllText(GetLogFileName(), fullLog);
+            if (!string.IsNullOrEmpty(logText))
+            {
+                string fullLog = $"{Constants.VeryLongLine}\nLogSearch {DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}\n{Constants.GeneralLogMessage}\n{logText}";
+                File.AppendAllText(GetLogFileName(), fullLog);
+            }
+        }
+
+        // Logs onlye errors in the searching function
+        public static void LogSearchErrors(string logText)
+        {
+            if (!string.IsNullOrEmpty(logText))
+            {
+                string fullLog = $"{Constants.VeryLongLine}\nLogSearchErrors {DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}\n{logText}";
+                File.AppendAllText(GetErrorLogFileName(), fullLog);
+            }
         }
 
         // Logs data in the downloading function
         public static void LogDownload(string logText)
         {
-            string fullLog = $"{Constants.VeryLongLine}\nLogDownload {DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}\n{logText}";
-            File.AppendAllText(GetLogFileName(), fullLog);
+            if (!string.IsNullOrEmpty(logText))
+            {
+                string fullLog = $"{Constants.VeryLongLine}\nLogDownload {DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}\n{logText}";
+                File.AppendAllText(GetLogFileName(), fullLog);
+            }
         }
 
         // Logs data in the sorting function
@@ -38,11 +60,77 @@ namespace MikuDownloader.misc
             File.AppendAllText(GetLogFileName(), fullLog);
         }
 
+        // Logs fail loaded images
+        public static void LogFailLoaded(string logText)
+        {
+            if (!string.IsNullOrEmpty(logText))
+            {
+                string fullLog = $"{DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")} : {logText}\n";
+                File.AppendAllText(GetFailLoadedFileName(), fullLog);
+            }
+        }
+
+        // Logs not loaded images
+        public static void LogNotLoaded(string logText)
+        {
+            if (!string.IsNullOrEmpty(logText))
+            {
+                string fullLog = $"{DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")} : {logText}\n";
+                File.AppendAllText(GetNotLoadedFileName(), fullLog);
+            }
+        }
+
+        // Logs not checked images
+        public static void LogNotChecked(string logText)
+        {
+            if (!string.IsNullOrEmpty(logText))
+            {
+                string fullLog = $"{DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")} : {logText}\n";
+                File.AppendAllText(GetNotCheckedFileName(), fullLog);
+            }
+        }
+
         // Gets log filename for main log
         public static string GetLogFileName()
         {
             var currTime = DateTime.Now.ToString("yyyyMMdd");
             var fileName = currTime + "_" + Constants.MainLogFileName;
+            Directory.CreateDirectory(Constants.MainLogDirectory);
+            return Path.Combine(Constants.MainLogDirectory, fileName);
+        }
+
+        // Gets log filename for error only log
+        public static string GetErrorLogFileName()
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd");
+            var fileName = currTime + "_" + Constants.MainErrorLogFileName;
+            Directory.CreateDirectory(Constants.MainLogDirectory);
+            return Path.Combine(Constants.MainLogDirectory, fileName);
+        }
+
+        // Gets log filename for fail loaded images
+        public static string GetFailLoadedFileName()
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd");
+            var fileName = currTime + "_" + Constants.FailLoadedFileName;
+            Directory.CreateDirectory(Constants.MainLogDirectory);
+            return Path.Combine(Constants.MainLogDirectory, fileName);
+        }
+
+        // Gets log filename for not loaded images
+        public static string GetNotLoadedFileName()
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd");
+            var fileName = currTime + "_" + Constants.NotLoadedFileName;
+            Directory.CreateDirectory(Constants.MainLogDirectory);
+            return Path.Combine(Constants.MainLogDirectory, fileName);
+        }
+
+        // Gets log filename for not loaded images
+        public static string GetNotCheckedFileName()
+        {
+            var currTime = DateTime.Now.ToString("yyyyMMdd");
+            var fileName = currTime + "_" + Constants.NotCheckedFileName;
             Directory.CreateDirectory(Constants.MainLogDirectory);
             return Path.Combine(Constants.MainLogDirectory, fileName);
         }
@@ -74,6 +162,12 @@ namespace MikuDownloader.misc
             return Path.Combine(Constants.MainDirectory, Constants.FailLoadedDirectory);
         }
 
+        // Gets the name of the Directory in which downloaded files go in
+        public static string GetWebpConvertedDirectory()
+        {
+            return Path.Combine(Constants.MainDirectory, Constants.WebpConvertedDirectory);
+        }
+
         // Parses a file full of URLs to a list
         public static List<string> ParseURLs(string filepath)
         {
@@ -95,41 +189,76 @@ namespace MikuDownloader.misc
             return finalURLs;
         }
 
-        // Checks if the file is image
-        public static bool IsImage(string filename)
+        // Returns the size of a file in bytes
+        public static long GetFileSize(string filename)
         {
-            if (filename.EndsWith(".txt") || filename.EndsWith(".mp3") || filename.EndsWith(".avi")
-                || filename.EndsWith(".mp4") || filename.EndsWith(".mkv") || filename.EndsWith(".webm"))
+            return new FileInfo(filename).Length;
+        }
+
+        // Returns a human readable file size
+        public static string GetSizeString(long length)
+        {
+            long B = 0, KB = 1024, MB = KB * 1024, GB = MB * 1024, TB = GB * 1024;
+            double size = length;
+            string suffix = nameof(B);
+
+            if (length >= TB)
             {
-                return false;
+                size = Math.Round((double)length / TB, 2);
+                suffix = nameof(TB);
+            }
+            else if (length >= GB)
+            {
+                size = Math.Round((double)length / GB, 2);
+                suffix = nameof(GB);
+            }
+            else if (length >= MB)
+            {
+                size = Math.Round((double)length / MB, 2);
+                suffix = nameof(MB);
+            }
+            else if (length >= KB)
+            {
+                size = Math.Round((double)length / KB, 2);
+                suffix = nameof(KB);
             }
 
-            using (FileStream stream = new FileStream(filename, FileMode.Open))
+            return $"{size} {suffix}";
+        }
+
+        // Checks if the file is image
+        public static bool IsImage(string filename, out IFileType fileType)
+        {
+            using (var fileStream = File.OpenRead(filename))
             {
-                stream.Seek(0, SeekOrigin.Begin);
+                var isRecognizableType = FileTypeValidator.IsTypeRecognizable(fileStream);
 
-                List<string> jpg = new List<string> { "FF", "D8" };
-                List<string> gif = new List<string> { "47", "49", "46" };
-                List<string> png = new List<string> { "89", "50", "4E", "47", "0D", "0A", "1A", "0A" };
-
-                List<List<string>> imgTypes = new List<List<string>> { jpg, gif, png };
-
-                List<string> bytesIterated = new List<string>();
-
-                for (int i = 0; i < 8; i++)
+                if (!isRecognizableType)
                 {
-                    string bit = stream.ReadByte().ToString("X2");
-                    bytesIterated.Add(bit);
-
-                    bool isImage = imgTypes.Any(img => !img.Except(bytesIterated).Any());
-                    if (isImage)
-                    {
-                        return true;
-                    }
+                    fileType = null;
+                    return false;
                 }
-            }
 
-            return false;
+                fileType = FileTypeValidator.GetFileType(fileStream);
+                return fileStream.IsImage();
+            }
+        }
+
+        // Returns file type based on byte header information
+        public static IFileType GetFileType(string filename)
+        {
+            using (var fileStream = File.OpenRead(filename))
+            {
+                var isRecognizableType = FileTypeValidator.IsTypeRecognizable(fileStream);
+
+                if (!isRecognizableType)
+                {
+                    return null;
+                }
+
+                IFileType fileType = FileTypeValidator.GetFileType(fileStream);
+                return fileType;
+            }
         }
 
         // Returns the resolution of an image from the file system
@@ -245,51 +374,99 @@ namespace MikuDownloader.misc
             }
         }
 
+        // call REST api for different websites
+        public static dynamic GetRestImageUrl(string baseUrl, MatchSource source)
+        {
+            var client = new RestClient(baseUrl);
+            var request = new RestRequest();
+            request.OnBeforeDeserialization = resp => { resp.ContentType = "application/json"; };
+            var queryResult = client.Execute(request);
+
+            dynamic finalUrl;
+            switch (source)
+            {
+                case MatchSource.Danbooru:
+                    finalUrl = JsonConvert.DeserializeObject<DanbooruRest.Root>(queryResult.Content);
+                    break;
+                case MatchSource.Gelbooru:
+                    finalUrl = JsonConvert.DeserializeObject<GelbooruRest.Root>(queryResult.Content);
+                    break;
+                case MatchSource.Yandere:
+                    finalUrl = JsonConvert.DeserializeObject<List<YandereRest.Root>>(queryResult.Content).FirstOrDefault();
+                    break;
+                case MatchSource.Konachan:
+                    finalUrl = JsonConvert.DeserializeObject<List<KonachanRest.Root>>(queryResult.Content).FirstOrDefault();
+                    break;
+                case MatchSource.Zerochan:
+                    finalUrl = JsonConvert.DeserializeObject<ZerochanRest.Root>(queryResult.Content);
+                    break;
+                case MatchSource.SankakuChannel:
+                    finalUrl = JsonConvert.DeserializeObject<List<SankakuChannelRest.Root>>(queryResult.Content).FirstOrDefault();
+                    break;
+                default:
+                    finalUrl = null;
+                    break;
+            }
+            return finalUrl;
+        }
+
         // Parses the post to find the url of the image
         public static string GetImageURL(string postURL, MatchSource source, out bool status)
         {
             try
             {
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                HtmlWeb web = new HtmlWeb();
-                HtmlDocument htmlDoc = web.Load(postURL);
                 string imageUrl = string.Empty;
                 status = true;
 
                 switch (source)
                 {
                     case MatchSource.Danbooru:
-                        imageUrl = GetDanbooruImage(htmlDoc);
-                        break;
-                    case MatchSource.SankakuChannel:
-                        imageUrl = GetSankakuImage(htmlDoc);
+                        string danbooruApiUrl = postURL + Constants.JsonReqParameterDanbooru;
+                        DanbooruRest.Root danbooruRestObject = GetRestImageUrl(danbooruApiUrl, source);
+                        imageUrl = danbooruRestObject.media_asset.variants.Find(o => o.type == "original").url;
                         break;
                     case MatchSource.Gelbooru:
-                        imageUrl = GetGelbooruImage(htmlDoc);
+                        string gelbooruApiUrl = postURL.Replace("page=post&s=view", "page=dapi&s=post&q=index") + Constants.JsonReqParameterGelbooru;
+                        GelbooruRest.Root gelbooruRestObject = GetRestImageUrl(gelbooruApiUrl, source);
+                        imageUrl = gelbooruRestObject.post[0].file_url;
                         break;
                     case MatchSource.Yandere:
-                        imageUrl = GetYandereImage(htmlDoc);
+                        string yandereApiUrl = postURL.Replace("post/show/", "post.json?tags=id:");
+                        YandereRest.Root yandereRestObject = GetRestImageUrl(yandereApiUrl, source);
+                        imageUrl = yandereRestObject.file_url;
                         break;
                     case MatchSource.Konachan:
-                        imageUrl = GetKonachanImage(htmlDoc);
+                        string konachanApiUrl = postURL.Replace("post/show/", "post.json?tags=id:");
+                        KonachanRest.Root konachanRestObject = GetRestImageUrl(konachanApiUrl, source);
+                        imageUrl = konachanRestObject.file_url;
                         break;
                     case MatchSource.Zerochan:
-                        imageUrl = GetZerochanImage(htmlDoc);
+                        string zerochanApiUrl = postURL + Constants.JsonReqParameterZerochan;
+                        ZerochanRest.Root zerochanRestObject = GetRestImageUrl(zerochanApiUrl, source);
+                        imageUrl = zerochanRestObject.full;
+                        break;
+                    case MatchSource.SankakuChannel:
+                        string sankakuChannelApiUrl = Constants.JsonReqParameterSankakuChannel + new Uri(postURL).Segments.LastOrDefault();
+                        SankakuChannelRest.Root sankakuChannelRestObject = GetRestImageUrl(sankakuChannelApiUrl, source);
+                        imageUrl = sankakuChannelRestObject.file_url;
                         break;
                     case MatchSource.Eshuushuu:
-                        imageUrl = GetEshuushuuImage(htmlDoc);
+                        HtmlWeb essWeb = new HtmlWeb();
+                        HtmlDocument essHtmlDoc = essWeb.Load(postURL);
+                        imageUrl = GetEshuushuuImage(essHtmlDoc);
                         break;
                     case MatchSource.AnimePictures:
-                        imageUrl = GetAnimePicturesImage(htmlDoc);
-                        break;
-                    case MatchSource.TheAnimeGallery: // TODO: save session cookie before trying to download
-                        imageUrl = GetTheAnimeGalleryImage(htmlDoc);
+                        HtmlWeb epWeb = new HtmlWeb();
+                        HtmlDocument epHtmlDoc = epWeb.Load(postURL);
+                        imageUrl = GetAnimePicturesImage(epHtmlDoc);
                         break;
                     default:
                         status = false;
                         imageUrl = "Unavailable";
                         break;
                 }
+                
                 return imageUrl;
             }
             catch (Exception ex)
@@ -297,182 +474,6 @@ namespace MikuDownloader.misc
                 status = false;
                 return ex.Message;
             }
-        }
-
-        // Parses danbooru result to get best resolution link
-        private static string GetDanbooruImage(HtmlDocument htmlDoc)
-        {
-            string origImage = string.Empty;
-
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//section[@id='post-information']/ul/li");
-            if (nodes != null)
-            {
-                foreach (var node in nodes)
-                {
-                    if (node.InnerHtml.Contains("Size"))
-                    {
-                        try
-                        {
-                            origImage = node.SelectSingleNode("a").GetAttributeValue("href", null);
-                            break;
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new ArgumentException(string.Format("Error when parsing danbooru url! Image was probably deleted or removed!\n{0}\n", ex.Message));
-                        }
-                    }
-                }
-                if (string.IsNullOrEmpty(origImage))
-                {
-                    throw new ArgumentException("Failed to parse danbooru url!");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Error when parsing danbooru url! Image was probably deleted or removed!");
-            }
-
-            return origImage;
-        }
-
-        // Parses sankaku result to get best resolution link
-        private static string GetSankakuImage(HtmlDocument htmlDoc)
-        {
-            string origImage = string.Empty;
-
-            var deleted = htmlDoc.DocumentNode.SelectNodes(".//div[@class='status-notice deleted']");
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='stats']/ul/li");
-
-            if (nodes != null && deleted == null)
-            {
-                foreach (var node in nodes)
-                {
-                    if (node.InnerHtml.Contains("Original:"))
-                    {
-                        origImage = node.SelectSingleNode("a").GetAttributeValue("href", null);
-                    }
-                }
-                if (string.IsNullOrEmpty(origImage))
-                {
-                    throw new ArgumentException("Failed to parse sankaku url!");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Error when parsing sankaku url! Post was deleted/removed!");
-            }
-            origImage = string.Format("https:{0}", origImage);
-            origImage = origImage.Replace("&amp;", "&");
-
-            return origImage;
-        }
-
-        // Parses danbooru result to get best resolution link
-        private static string GetGelbooruImage(HtmlDocument htmlDoc)
-        {
-            string origImage = string.Empty;
-
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div/li/a");
-
-            if (nodes != null)
-            {
-                foreach (var node in nodes)
-                {
-                    if (node.InnerHtml.Equals("Original image"))
-                    {
-                        origImage = node.GetAttributeValue("href", null);
-                        break;
-                    }
-                }
-                if (string.IsNullOrEmpty(origImage))
-                {
-                    throw new ArgumentException("Failed to parse gelbooru url!");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Error when parsing gelbooru url! Post was deleted/removed!");
-            }
-
-            return origImage;
-        }
-
-        // Parses yande.re result to get best resolution link
-        private static string GetYandereImage(HtmlDocument htmlDoc)
-        {
-            string origImage = string.Empty;
-
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div/ul/li/a[@class='original-file-unchanged' or @class='original-file-changed']");
-
-            if (nodes != null)
-            {
-                foreach (var node in nodes)
-                {
-                    origImage = node.GetAttributeValue("href", null);
-                }
-                if (string.IsNullOrEmpty(origImage))
-                {
-                    throw new ArgumentException("Failed to parse yande.re url!");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Error when parsing yande.re url! Image was probably deleted");
-            }
-
-            return origImage;
-        }
-
-        // Parses konachan result to get best resolution link
-        private static string GetKonachanImage(HtmlDocument htmlDoc)
-        {
-            string origImage = string.Empty;
-
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div/ul/li/a[@class='original-file-unchanged' or @class='original-file-changed']");
-
-            if (nodes != null)
-            {
-                foreach (var node in nodes)
-                {
-                    origImage = node.GetAttributeValue("href", null);
-                }
-                if (string.IsNullOrEmpty(origImage))
-                {
-                    throw new ArgumentException("Failed to parse konachan url!");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Error when parsing konachan url! Image was probably deleted");
-            }
-
-            return origImage;
-        }
-
-        // Parses zerochan result to get best resolution link
-        private static string GetZerochanImage(HtmlDocument htmlDoc)
-        {
-            string origImage = string.Empty;
-
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@id='content']/div/a");
-
-            if (nodes != null)
-            {
-                foreach (var node in nodes)
-                {
-                    origImage = node.GetAttributeValue("href", null);
-                }
-                if (string.IsNullOrEmpty(origImage))
-                {
-                    throw new ArgumentException("Failed to parse zerochan url!");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Error when parsing zerochan url! Image was probably deleted");
-            }
-
-            return origImage;
         }
 
         // Parses e-shuushuu result to get best resolution link
@@ -525,34 +526,6 @@ namespace MikuDownloader.misc
                 throw new ArgumentException("Error when parsing anime-pictures url! Post was deleted/removed!");
             }
             origImage = string.Format("https://anime-pictures.net{0}", origImage);
-
-            return origImage;
-        }
-
-        // Parses The Anime Gallery result to get best resolution link
-        private static string GetTheAnimeGalleryImage(HtmlDocument htmlDoc)
-        {
-            string origImage = string.Empty;
-
-            var nodes = htmlDoc.DocumentNode.SelectNodes(".//div[@class='download']/a");
-
-            if (nodes != null)
-            {
-                foreach (var node in nodes)
-                {
-                    origImage = node.GetAttributeValue("href", null);
-                }
-                if (string.IsNullOrEmpty(origImage))
-                {
-                    throw new ArgumentException("Failed to parse the anime gallery url!");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Error when parsing the anime gallery url! Post was deleted/removed!");
-
-            }
-            origImage = string.Format("www.theanimegallery.com{0}", origImage);
 
             return origImage;
         }
@@ -657,9 +630,25 @@ namespace MikuDownloader.misc
 
             foreach (string image in tempImageList)
             {
-                if (IsImage(image))
+                bool isImage = IsImage(image, out IFileType fileType);
+
+                if (isImage)
                 {
                     finalImages.Add(image);
+                }
+                else
+                {
+                    string errors = string.Empty;
+                    errors += string.Format("Original image: {0}\n", image);
+                    long fileSize = GetFileSize(image);
+                    errors += string.Format("File size: {0}\n", GetSizeString(fileSize));
+                    if (fileType != null)
+                    {
+                        errors += string.Format("File type: ({1}) {0}\n", fileType.Name, fileType.Extension);
+                    }
+                    errors += "Not an image!\n";
+                    LogSearchErrors(errors);
+                    LogNotChecked(image);
                 }
             }
 
@@ -723,6 +712,57 @@ namespace MikuDownloader.misc
         public static string GetAppVersion()
         {
             return $"MikuDownloader {Assembly.GetExecutingAssembly().GetName().Version}";
+        }
+
+        // Converts webp images to other formats
+        public static string ConverWebpToJpg(string webpFilePath)
+        {
+            string dirPath = GetWebpConvertedDirectory();
+            Directory.CreateDirectory(dirPath);
+            string jpgFileName;
+
+            // Load the webp file in an instance of Image
+            using (var image = Aspose.Imaging.Image.Load(webpFilePath))
+            {
+                // Create an instance of JpegOptions
+                string origExt = Path.GetExtension(webpFilePath);
+
+                if (origExt.Contains(".jpg") || origExt.Contains(".jpeg"))
+                {
+                    var exportOptions = new Aspose.Imaging.ImageOptions.JpegOptions();
+                    Directory.CreateDirectory(dirPath);
+                    jpgFileName = Path.Combine(dirPath, Path.GetFileNameWithoutExtension(webpFilePath) + ".jpg");
+                    image.Save(jpgFileName, exportOptions);
+                }
+                else if (origExt.Contains(".gif"))
+                {
+                    var exportOptions = new Aspose.Imaging.ImageOptions.GifOptions();
+                    Directory.CreateDirectory(dirPath);
+                    jpgFileName = Path.Combine(dirPath, Path.GetFileNameWithoutExtension(webpFilePath) + ".gif");
+                    image.Save(jpgFileName, exportOptions);
+                }
+                else if (origExt.Contains(".png") || origExt.Contains(".webp"))
+                {
+                    var exportOptions = new Aspose.Imaging.ImageOptions.PngOptions();
+                    Directory.CreateDirectory(dirPath);
+                    jpgFileName = Path.Combine(dirPath, Path.GetFileNameWithoutExtension(webpFilePath) + ".png");
+                    image.Save(jpgFileName, exportOptions);
+                }
+                else
+                {
+                    return null;
+                }
+            }
+
+            return jpgFileName;
+        }
+
+        // Get the free remaining space of the current drive
+        public static long GetFreeSpace()
+        {
+            string currDrive = Path.GetPathRoot(Assembly.GetEntryAssembly().Location);
+            DriveInfo di = new DriveInfo(currDrive);
+            return di.AvailableFreeSpace;
         }
     }
 }

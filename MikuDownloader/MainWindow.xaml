@@ -255,11 +255,11 @@
             <Label Grid.Column="2" Grid.Row="0" Content="Information" Height="27" Width="420" Background="#FF00FFD8" BorderBrush="#FF00FFD8"/>
             <TextBox Grid.Column="2" Grid.Row="1" Grid.RowSpan="5" x:Name="txtBlockData" Height="252" Width="420" BorderBrush="#FF00FFD8" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" Style="{DynamicResource NoHoverTextBox}"/>
 
-            <Button Grid.Column="1" Grid.Row="0" x:Name="btnDragDrop" BorderBrush="#FF00FFD8" Background="#FF00FFD8" Margin="5,0,5,0" Content="Go Go Miku Loader" Click="BtnDragDrop_Click" Style="{DynamicResource NoHoverButtons}"/>
+            <Button Grid.Column="1" Grid.Row="0" x:Name="btnDragDrop" BorderBrush="#FF00FFD8" Background="#FF00FFD8" Margin="5,0,5,0" Content="Go Go Miku Checker" Click="BtnDragDrop_Click" Style="{DynamicResource NoHoverButtons}"/>
             <CheckBox Grid.Column="1" Grid.Row="1" x:Name="chkBoxDownload" BorderBrush="#FF00FFD8" Background="#FF00FFD8" IsChecked="True" Content="Download after search" ToolTip="Downloads found images after searching is finished" Margin="5,5,5,0" Style="{DynamicResource NoHoverCheckBox}"/>
             <CheckBox Grid.Column="1" Grid.Row="2" x:Name="chkBoxSort" BorderBrush="#FF00FFD8" Background="#FF00FFD8" IsChecked="True" Content="Sort not downloaded" ToolTip="Copies local files to NotLoaded/FailLoaded folders and downloads original image URLs when no matches were found" Margin="5,5,5,0" Style="{DynamicResource NoHoverCheckBox}"/>
 
-            <Button Grid.Column="1" Grid.Row="3" x:Name="btnGif" Background="Transparent" BorderBrush="Transparent" Width="150" Height="150">
+          <Button Grid.Column="1" Grid.Row="3" x:Name="btnGif" Background="Transparent" BorderBrush="Transparent" Width="150" Height="150">
                 <Button.Template>
                     <ControlTemplate>
                         <Image x:Name="imgControlGif" gif:AnimationBehavior.SourceUri="/Resources/MikuGifs/__hatsune_miku_vocaloid_drawn_by_shigatake__99bc05c1f70100eb769dd41c90907483.gif"/>

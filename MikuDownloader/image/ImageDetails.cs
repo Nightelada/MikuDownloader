@@ -1,6 +1,7 @@
 ﻿using MikuDownloader.enums;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace MikuDownloader
@@ -34,6 +35,24 @@ namespace MikuDownloader
             }
             Tags = new List<string>();
             SetTags(tag);
+            Resolution = res;
+            Similarity = sim;
+            SetMatchType(mType);
+
+            PerformTransformations();
+        }
+
+        public ImageDetails(string post, ImmutableList<string> tags, string res, string sim, string mType)
+        {
+            if (!post.Contains("https:") && !post.Contains("http:"))
+            {
+                PostURL = string.Format("https:{0}", post);
+            }
+            else
+            {
+                PostURL = post;
+            }
+            Tags = tags.ToList();
             Resolution = res;
             Similarity = sim;
             SetMatchType(mType);
@@ -156,11 +175,6 @@ namespace MikuDownloader
             {
                 MatchSource = MatchSource.AnimePictures;
                 Priority = 8;
-            }
-            else if (imageSource.Contains("theanimegallery"))
-            {
-                MatchSource = MatchSource.TheAnimeGallery;
-                Priority = 9;
             }
         }
         

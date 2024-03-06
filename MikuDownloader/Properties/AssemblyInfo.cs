@@ -10,9 +10,9 @@ using System.Windows;
 [assembly: AssemblyTitle("MikuDownloader")]
 [assembly: AssemblyDescription("Searches for images on iqdb.net")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("ppy-trans")]
+[assembly: AssemblyCompany("Nightelada")]
 [assembly: AssemblyProduct("MikuDownloader")]
-[assembly: AssemblyCopyright("Copyright © Pepkata 2021")]
+[assembly: AssemblyCopyright("Copyright © Nightelada 2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -51,5 +51,5 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.0.1.182")]
-[assembly: AssemblyFileVersion("2.0.1.182")]
+[assembly: AssemblyVersion("3.2.0.115")]
+[assembly: AssemblyFileVersion("3.2.0.115")]

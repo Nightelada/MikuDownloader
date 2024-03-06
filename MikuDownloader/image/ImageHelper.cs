@@ -1,4 +1,6 @@
 ﻿using HtmlAgilityPack;
+using IqdbApi;
+using IqdbApi.Models;
 using MikuDownloader.enums;
 using MikuDownloader.image;
 using MikuDownloader.misc;
@@ -8,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+
 
 namespace MikuDownloader
 {
@@ -96,7 +99,7 @@ namespace MikuDownloader
         }
 
         // Makes HTML request for image reverse search using a local image file
-        public async static Task<Tuple<HtmlDocument, string>> GetResponseFromFile(string imagePath)
+        public static async Task<Tuple<HtmlDocument, string>> GetResponseFromFile(string imagePath)
         {
             var httpResponse = await ReverseSearchFileHTTP(imagePath);
             HtmlDocument htmlDoc = new HtmlDocument();
@@ -108,7 +111,7 @@ namespace MikuDownloader
         }
 
         // Makes HTML request for image reverse search using an existing image URL
-        public async static Task<Tuple<HtmlDocument, string>> GetResponseFromURL(string imageURL)
+        public static async Task<Tuple<HtmlDocument, string>> GetResponseFromURL(string imageURL)
         {
             var httpResponse = await ReverseSearchURLHTTP(imageURL);
             HtmlDocument htmlDoc = new HtmlDocument();
@@ -266,6 +269,132 @@ namespace MikuDownloader
             return imageContainer;
         }
 
+        public static async Task<Tuple<SearchResult, string>> IqdbApiFileSearch(string filePath)
+        {
+            IIqdbClient api = new IqdbClient();
+
+            using (var fs = new FileStream(filePath, FileMode.Open))
+            {
+                var searchResult = await api.SearchFile(fs);
+                return new Tuple<SearchResult, string>(searchResult, filePath);
+            }
+        }
+
+        public static async Task<Tuple<SearchResult, string>> IqdbApiUrlSearch(string urlPath)
+        {
+            IIqdbClient api = new IqdbClient();
+
+            var searchResult = await api.SearchUrl(urlPath);
+            return new Tuple<SearchResult, string>(searchResult, urlPath);
+
+        }
+        
+        // Revamped MAIN FUNC to use IqdbApi by ImoutoChan - https://github.com/ImoutoChan/IqdbApi
+        public static ImageData IqdbApiImageSearch(SearchResult searchResult, string originalImage, FileType originalImageType, out string status)
+        {
+            string response = string.Empty;
+
+            response = string.Format("Original image: {0}\n", originalImage);
+
+            // check if error when loading image
+            if (!searchResult.IsFound)
+            {
+                response += string.Format("Image search failed! No matching images found.\n");
+                status = response;
+                return null;
+            }
+
+
+            if (searchResult.Matches != null)
+            {
+                foreach (Match match in searchResult.Matches)
+                {
+                    if (match.MatchType == IqdbApi.Enums.MatchType.Best)
+                    {
+                        response += "Best image found!\n";
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                response += "Image search failed! Unable to find any decent matches for image!\n";
+                status = response;
+                return null;
+            }
+
+            List<string> resolutions = new List<string>();
+            List<ImageDetails> imagesList = new List<ImageDetails>();
+            List<ImageDetails> bestImages = new List<ImageDetails>();
+            ImageData imageContainer = new ImageData(originalImage, originalImageType);
+
+            foreach (Match match in searchResult.Matches)
+            {
+                // get info for each match
+                if (match.MatchType == IqdbApi.Enums.MatchType.Best || match.MatchType == IqdbApi.Enums.MatchType.Additional)
+                {
+                    var postId = match.Url;
+                    var tags = match.Tags;
+                    var resolution = match.Resolution.Width + "×" + match.Resolution.Height + " [" + match.Rating.ToString() + "]";
+
+                    var similarity = match.Similarity + "%";
+
+                    var matchType = match.MatchType.ToString();
+
+                    if (postId != null && tags != null && resolution != null)
+                    {
+                        ImageDetails tempImg = new ImageDetails(postId, tags, resolution, similarity, matchType);
+                        imagesList.Add(tempImg);
+
+                        if (!resolutions.Contains(tempImg.Resolution))
+                        {
+                            resolutions.Add(tempImg.Resolution);
+                        }
+                    }
+                }
+            }
+
+            try
+            {
+                string bestResoltuion = Utilities.DetermineBestResolution(resolutions);
+                response += string.Format("Best resolution found is: {0}\n", bestResoltuion);
+
+                if (imagesList.Count > 0)
+                {
+                    foreach (ImageDetails image in imagesList)
+                    {
+                        if (image.Resolution.Equals(bestResoltuion))
+                        {
+                            bestImages.Add(image);
+                            response += string.Format("{0}: {1} Similarity: {2} Rating: {3} Resolution: {4}\n", image.MatchType.ToString(), image.PostURL, image.Similarity, image.MatchRating.ToString(), image.Resolution.ToString());
+                        }
+                        else if (image.Resolution.Equals("Unavailable"))
+                        {
+                            response += string.Format("Weird resolution! Check: {0}\n", image.PostURL);
+                        }
+                        else
+                        {
+                            response += string.Format("{0}: {1} Similarity: {2} Rating: {3} Resolution: {4}\n", image.MatchType.ToString(), image.PostURL, image.Similarity, image.MatchRating.ToString(), image.Resolution.ToString());
+                        }
+                    }
+                }
+                else
+                {
+                    response += "Image search failed! If you see this contact the developer!\n";
+                    status = response;
+                    return null;
+                }
+            }
+            catch (ArgumentException ae)
+            {
+                response += string.Format("Could not determine best resolution! {0}\n", ae.Message);
+            }
+
+            imageContainer.MatchingImages = bestImages;
+
+            status = response;
+            return imageContainer;
+        }
         // Downloads best image from a set of sites provided
         public static string DownloadBestImage(List<ImageDetails> images, string fileName = "")
         {
@@ -299,18 +428,6 @@ namespace MikuDownloader
             string errorMessages = string.Empty;
 
             images.Sort((x, y) => x.Priority.CompareTo(y.Priority));
-
-            if (images.Count == 1)
-            {
-                if (images[0].MatchSource == MatchSource.TheAnimeGallery)
-                {
-                    throw new ArgumentException(Constants.TheAnimeGalleryErrorMessage);
-                }
-                else if (images[0].MatchSource == MatchSource.Zerochan)
-                {
-                    throw new ArgumentException(Constants.ZerochanErrorMessage);
-                }
-            }
 
             foreach (ImageDetails image in images)
             {

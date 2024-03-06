@@ -1,4 +1,5 @@
-﻿using MikuDownloader.enums;
+﻿using FileTypeChecker.Abstracts;
+using IqdbApi.Models;
 using MikuDownloader.image;
 using MikuDownloader.misc;
 using System;
@@ -13,6 +14,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using XamlAnimatedGif;
+using FileType = MikuDownloader.enums.FileType;
+using Image = System.Windows.Controls.Image;
 
 namespace MikuDownloader
 {
@@ -26,6 +29,27 @@ namespace MikuDownloader
         private ObservableCollection<Tuple<FileType, string>> dragAndDropItems;
         private List<ImageData> allImages;
         private readonly DispatcherTimer gifTimer = new DispatcherTimer(DispatcherPriority.Render);
+
+        // Used for pause-run function
+        private bool loadedLatestData = false;
+        private List<string> listOfImageUrls;
+        private List<string> listOfImageFiles;
+        public delegate void NextMikuLoaderDelegate();
+        private bool continueLoading = false;
+        private int lastFileLoadedIndex = 0;
+        private int lastUrlLoadedIndex = 0;
+        private int lastImageDownloaded = 0;
+        private int lastImageSorted = 0;
+        private bool finishedCheckingUrls = false;
+        private bool finishedCheckingFiles = false;
+        private bool finishedDownloadingFiles = false;
+        private bool finishedSortingFiles = false;
+        private string cementedText = string.Empty;
+        private int urlsFoundCount = 0;
+        private int filesFoundCount = 0;
+        private int downloadedCount = 0;
+        private int failDownloadedCount = 0;
+        private int noImagesFoundCount = 0;
 
         public MainWindow()
         {
@@ -56,6 +80,26 @@ namespace MikuDownloader
         private void GifTimer_tick(object sender, EventArgs e)
         {
             SetRandomGif();
+        }
+
+        private void ResetPauseParameters()
+        {
+            loadedLatestData = false;
+            continueLoading = false;
+            lastFileLoadedIndex = 0;
+            lastUrlLoadedIndex = 0;
+            lastImageDownloaded = 0;
+            lastImageSorted = 0;
+            finishedCheckingUrls = false;
+            finishedCheckingFiles = false;
+            finishedDownloadingFiles = false;
+            finishedSortingFiles = false;
+            cementedText = string.Empty;
+            urlsFoundCount = 0;
+            filesFoundCount = 0;
+            downloadedCount = 0;
+            failDownloadedCount = 0;
+            noImagesFoundCount = 0;
         }
 
         // Makes all UI buttons not active
@@ -132,7 +176,8 @@ namespace MikuDownloader
                         else if (s.EndsWith(".jpg", StringComparison.InvariantCultureIgnoreCase)
                                 || s.EndsWith(".jpeg", StringComparison.InvariantCultureIgnoreCase)
                                 || s.EndsWith(".gif", StringComparison.InvariantCultureIgnoreCase)
-                                || s.EndsWith(".png", StringComparison.InvariantCultureIgnoreCase))
+                                || s.EndsWith(".png", StringComparison.InvariantCultureIgnoreCase)
+                                || s.EndsWith(".webp", StringComparison.InvariantCultureIgnoreCase))
                         {
                             ft = FileType.Image;
                         }
@@ -162,6 +207,7 @@ namespace MikuDownloader
                     }
                 }
             }
+            ResetPauseParameters();
         }
 
         // Performs different action when items are pasted inside application or the Delete key is pressed while items are selected from the list box
@@ -232,7 +278,8 @@ namespace MikuDownloader
                             else if (s.EndsWith(".jpg", StringComparison.InvariantCultureIgnoreCase)
                                 || s.EndsWith(".jpeg", StringComparison.InvariantCultureIgnoreCase)
                                 || s.EndsWith(".gif", StringComparison.InvariantCultureIgnoreCase)
-                                || s.EndsWith(".png", StringComparison.InvariantCultureIgnoreCase))
+                                || s.EndsWith(".png", StringComparison.InvariantCultureIgnoreCase)
+                                || s.EndsWith(".webp", StringComparison.InvariantCultureIgnoreCase))
                             {
                                 ft = FileType.Image;
                             }
@@ -255,6 +302,9 @@ namespace MikuDownloader
                     Tuple<FileType, string> tempTuple = new Tuple<FileType, string>(FileType.URL, imgUrl);
                     dragAndDropItems.Add(tempTuple);
                 }
+
+                ResetPauseParameters();
+                btnDragDrop.Content = "Go Go Miku Checker";
             }
 
             else if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
@@ -275,6 +325,9 @@ namespace MikuDownloader
                 {
                     dragAndDropItems.Remove(delItem);
                 }
+
+                ResetPauseParameters();
+                btnDragDrop.Content = "Go Go Miku Checker";
             }
         }
 
@@ -327,36 +380,126 @@ namespace MikuDownloader
 
         private async Task MainLoad()
         {
-            Tuple<List<string>, List<string>> dragNDropTuple;
-            dragNDropTuple = await CheckDragNDropList();
-
-            txtBlockData.Text = string.Format($"Finished checking items:\nTotal URLs to check: {dragNDropTuple.Item1.Count}\nTotal files to check: {dragNDropTuple.Item2.Count}");
-
-            if (dragNDropTuple.Item1.Count > 0)
+            if (!loadedLatestData)
             {
-                await ReverseSearchFURLs(dragNDropTuple.Item1);
-            }
+                ResetPauseParameters();
+                Tuple<List<string>, List<string>> dragNDropTuple;
+                dragNDropTuple = await CheckDragNDropList();
+                listOfImageUrls = dragNDropTuple.Item1;
+                listOfImageFiles = dragNDropTuple.Item2;
 
-            if (dragNDropTuple.Item2.Count > 0)
-            {
-                await ReverseSearchFiles(dragNDropTuple.Item2);
-            }
+                cementedText = string.Format($"Finished checking items:\nTotal URLs to check: {listOfImageUrls.Count}\nTotal files to check: {listOfImageFiles.Count}\nPress the Go Go Miku Loader button to start/stop the loading process");
 
-            if (chkBoxDownload.IsChecked == true)
-            {
-                await DownloadImages(allImages);
-
-                if (chkBoxSort.IsChecked == true)
-                {
-                    await SortNonLoadedImages(allImages);
-                }
+                txtBlockData.Text = cementedText;
+                loadedLatestData = true;
+                btnDragDrop.Content = "Go Go Miku Loader";
             }
             else
             {
-                Utilities.SaveSerializedList(Utilities.SerializeImageList(allImages));
+                if (continueLoading)
+                {
+                    continueLoading = false;
+                    btnDragDrop.Content = "Resume Loading";
+                }
+                else
+                {
+                    continueLoading = true;
+                    btnDragDrop.Content = "Stop Loading";
+                    _ = btnDragDrop.Dispatcher.BeginInvoke(
+                        DispatcherPriority.Normal,
+                        new NextMikuLoaderDelegate(LoadNextImage));
+                }
+            }
+        }
+
+        public async void LoadNextImage()
+        {
+            int totalUrlCount = listOfImageUrls.Count;
+            int totalFilesCount = listOfImageFiles.Count;
+            int totalImagesCount = allImages.Count;
+
+            long twoHundredMB = 200 * 1024 * 1024;
+            if (Utilities.GetFreeSpace() <= twoHundredMB)
+            {
+                continueLoading = false;
+                txtBlockData.Text = $"{txtBlockData.Text}\nAvailable free space is less than 200MB!\nFree up space and click the resume button!";
+                btnDragDrop.Content = "Resume Loading";
+                System.Media.SystemSounds.Exclamation.Play();
+                return;
             }
 
-            allImages = new List<ImageData>();
+            if (lastUrlLoadedIndex == totalUrlCount || totalUrlCount == 0)
+            {
+                if (!finishedCheckingUrls)
+                {
+                    cementedText = txtBlockData.Text;
+                }
+                finishedCheckingUrls = true;
+            }
+            if (lastFileLoadedIndex == totalFilesCount || totalFilesCount == 0)
+            {
+                if (!finishedCheckingFiles)
+                {
+                    cementedText = txtBlockData.Text;
+                }
+                finishedCheckingFiles = true;
+            }
+            if ((lastImageDownloaded == totalImagesCount && finishedCheckingUrls && finishedCheckingFiles) || chkBoxDownload.IsChecked == false)
+            {
+                if (!finishedDownloadingFiles)
+                {
+                    cementedText = txtBlockData.Text;
+                }
+                finishedDownloadingFiles = true;
+            }
+            if ((lastImageSorted == totalImagesCount && finishedCheckingUrls && finishedCheckingFiles) || chkBoxSort.IsChecked == false)
+            {
+                finishedSortingFiles = true;
+            }
+
+            if (!finishedCheckingUrls)
+            {
+                await ReverseSearchURL(lastUrlLoadedIndex, totalUrlCount);
+                lastUrlLoadedIndex++;
+            }
+            else if (!finishedCheckingFiles)
+            {
+                await ReverseSearchFile(lastFileLoadedIndex, totalFilesCount);
+                lastFileLoadedIndex++;
+            }
+            else if (!finishedDownloadingFiles)
+            {
+                await DownloadImage(lastImageDownloaded, totalImagesCount);
+                lastImageDownloaded++;
+            }
+            else if (chkBoxSort.IsChecked == true && lastImageSorted < totalImagesCount)
+            {
+                await SortNonLoadedImage(lastImageSorted, totalImagesCount);
+                lastImageSorted++;
+            }/*
+            else
+            {
+                Utilities.SaveSerializedList(Utilities.SerializeImageList(allImages));
+            }*/
+
+            if (finishedCheckingUrls && finishedCheckingFiles && finishedDownloadingFiles && finishedSortingFiles)
+            {
+                continueLoading = false;
+                allImages = new List<ImageData>();
+                btnDragDrop.Content = "Go Go Miku Loader";
+
+                lastFileLoadedIndex = 0;
+                lastUrlLoadedIndex = 0;
+                lastImageDownloaded = 0;
+                lastImageSorted = 0;
+            }
+
+            if (continueLoading)
+            {
+                await btnDragDrop.Dispatcher.BeginInvoke(
+                        DispatcherPriority.Normal,
+                        new NextMikuLoaderDelegate(LoadNextImage));
+            }
         }
 
         private async Task<Tuple<List<string>,List<string>>> CheckDragNDropList()
@@ -382,247 +525,288 @@ namespace MikuDownloader
                 {
                     await Task.Run(() => allFiles.AddRange(Utilities.GetAllImagesFromFolder(tuple.Item2)));
                 }
+                else if (tuple.Item1 == FileType.Other)
+                {
+                    Utilities.LogNotChecked(tuple.Item2);
+                }
             }
 
             return new Tuple<List<string>, List<string>>(allURLs, allFiles);
         }
 
         // Checks a list of image URLs
-        private async Task ReverseSearchFURLs(List<string> finalUrls)
+        private async Task ReverseSearchURL(int urlToLoad, int totalUrlsToLoad)
         {
             string currStatus = string.Empty;
-            int currPic = 0;
-            int lastPic = finalUrls.Count;
-            int foundCount = 0;
-            string prevText = txtBlockData.Text;
+            int currPic = urlToLoad;
+            int lastPic = totalUrlsToLoad;
+            string prevText = cementedText;
 
-            foreach (string imageURL in finalUrls)
+
+            currStatus = $"{prevText}\n\nMatching images found: {urlsFoundCount}/{lastPic}";
+            currPic++;
+            string status = string.Empty;
+            txtBlockData.Text = $"{currStatus}\nChecking image {currPic} of {lastPic}...\n";
+
+            string imageURL = listOfImageUrls[urlToLoad];
+            try
             {
-                currStatus = $"{prevText}\n\nMatching images found: {foundCount}/{lastPic}";
-                currPic++;
-                string status = string.Empty;
-                txtBlockData.Text = $"{currStatus}\nChecking image {currPic} of {lastPic}...\n";
+                var responseTuple = await ImageHelper.IqdbApiUrlSearch(imageURL);
 
-                try
+                var imageList = ImageHelper.IqdbApiImageSearch(responseTuple.Item1, responseTuple.Item2, FileType.URL, out status);
+
+                if (imageList != null && imageList.MatchingImages.Count > 0)
                 {
-                    var responseTuple = await ImageHelper.GetResponseFromURL(imageURL);
-
-                    var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, FileType.URL, out status);
-
-                    if (imageList != null && imageList.MatchingImages.Count > 0)
-                    {
-                        foundCount++;
-                        allImages.Add(imageList);
-                    }
-                    else
-                    {
-                        allImages.Add(new ImageData(imageURL, FileType.URL));
-                    }
+                    urlsFoundCount++;
+                    allImages.Add(imageList);
                 }
-                catch (Exception ex)
+                else
                 {
-                    if (ex.InnerException != null)
-                    {
-                        status += string.Format("Failed to reverse search image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        status += string.Format("Failed to reverse search image!\n{0}\n", ex.Message);
-                    }
-                }
-                finally
-                {
-                    Utilities.LogSearch(status);
+                    allImages.Add(new ImageData(imageURL, FileType.URL));
+                    Utilities.LogNotLoaded(imageURL);
                 }
             }
-
-            currStatus = $"{prevText}\n\nMatching images found: {foundCount}/{lastPic}";
-            txtBlockData.Text = $"{currStatus}\nFinished checking URLs list! Check log for more info!";
+            catch (Exception ex)
+            {
+                if (ex.InnerException != null)
+                {
+                    status += string.Format("Failed to reverse search image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                }
+                else
+                {
+                    status += string.Format("Failed to reverse search image!\n{0}\n", ex.Message);
+                }
+                Utilities.LogNotLoaded(imageURL);
+            }
+            finally
+            {
+                Utilities.LogSearch(status);
+            }
         }
 
         // Checks a list of image files
-        private async Task ReverseSearchFiles(List<string> finalFiles)
+        private async Task ReverseSearchFile(int fileToLoad, int totalFilesToLoad)
         {
             string currStatus;
-            int currPic = 0;
-            int lastPic = finalFiles.Count;
-            int foundCount = 0;
-            string prevText = txtBlockData.Text;
+            int currPic = fileToLoad;
+            int lastPic = totalFilesToLoad;
+            string prevText = cementedText;
 
-            foreach (string imageFile in finalFiles)
+
+            currStatus = $"{prevText}\n\nMatching images found: {filesFoundCount}/{lastPic}";
+            currPic++;
+            string status = string.Empty;
+            string errors = string.Empty;
+            bool isError = false;
+            bool webpFlag = false;
+            string webpFileName = string.Empty;
+
+            txtBlockData.Text = $"{currStatus}\nChecking image {currPic} of {lastPic}...\n";
+
+            string imageFile = listOfImageFiles[fileToLoad];
+            try
             {
-                currStatus = $"{prevText}\n\nMatching images found: {foundCount}/{lastPic}";
-                currPic++;
-                string status = string.Empty;
-                txtBlockData.Text = $"{currStatus}\nChecking image {currPic} of {lastPic}...\n";
+                errors += string.Format("Original image: {0}\n", imageFile);
+                long fileSize = Utilities.GetFileSize(imageFile);
+                errors += string.Format("File size: {0}\n", Utilities.GetSizeString(fileSize));
+                IFileType fType = Utilities.GetFileType(imageFile);
+                errors += string.Format("File type: ({1}) {0}\n", fType.Name, fType.Extension);
 
-                try
+                if (fileSize > Constants.MaxFileSize)
                 {
-                    var responseTuple = await ImageHelper.GetResponseFromFile(imageFile);
+                    errors += "Failed to reverse search image!\nFile is too large or corrupted!\n";
+                    isError = true;
+                }
 
-                    var imageList = ImageHelper.ReverseImageSearch(responseTuple.Item1, responseTuple.Item2, FileType.Image, out status);
+                if (!Constants.AcceptedFileExtensions.Contains(fType.Extension))
+                {
+                    if (fType.Extension.Equals("webp"))
+                    {
+                        webpFileName = Utilities.ConverWebpToJpg(imageFile);
+                        webpFlag = true;
+                    }
+                    else
+                    {
+                        errors += "Failed to reverse search image!\nFile is too large or corrupted!\n";
+                        isError = true;
+                    }
+                }
+
+                if (!isError)
+                {
+                    Tuple<SearchResult, string> responseTuple;
+                    if (webpFlag)
+                    {
+                        responseTuple = await ImageHelper.IqdbApiFileSearch(webpFileName);
+                    }
+                    else
+                    {
+                        responseTuple = await ImageHelper.IqdbApiFileSearch(imageFile);
+                    }
+
+                    var imageList = ImageHelper.IqdbApiImageSearch(responseTuple.Item1, responseTuple.Item2, FileType.Image, out status);
 
                     if (imageList != null && imageList.MatchingImages.Count > 0)
                     {
                         allImages.Add(imageList);
-                        foundCount++;
+                        filesFoundCount++;
                     }
                     else
                     {
                         txtBlockData.Text += $"No matches found for {Path.GetFileName(imageFile)}!";
                         allImages.Add(new ImageData(imageFile, FileType.Image));
+                        Utilities.LogNotLoaded(imageFile);
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    if (ex.InnerException != null)
-                    {
-                        status += string.Format("Failed to reverse search image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        status += string.Format("Failed to reverse search image!\n{0}\n", ex.Message);
-                    }
-                }
-                finally
-                {
-                    Utilities.LogSearch(status);
+                    Utilities.LogNotChecked(imageFile);
                 }
             }
+            catch (Exception ex)
+            {
+                isError = true;
+                if (ex.InnerException != null)
+                {
+                    status += string.Format("Failed to reverse search image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                    errors += string.Format("Failed to reverse search image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
 
-            currStatus = $"{prevText}\n\nMatching images found: {foundCount}/{lastPic}";
-            txtBlockData.Text = $"{currStatus}\nFinished checking files list! Check log for more info!";
+                }
+                else
+                {
+                    status += string.Format("Failed to reverse search image!\n{0}\n", ex.Message);
+                    errors += string.Format("Failed to reverse search image!\n{0}\n", ex.Message);
+                }
+                Utilities.LogNotLoaded(imageFile);
+            }
+            finally
+            {
+                Utilities.LogSearch(status);
+                if (isError)
+                {
+                    Utilities.LogSearchErrors(errors);
+                }
+            }
         }
 
         // Downloads a list of images
-        private async Task DownloadImages(List<ImageData> images)
+        private async Task DownloadImage(int imageToDownload, int totalImagesToDownload)
         {
             string currStatus;
-            int currPic = 0;
-            int lastPic = images.Count;
-            int downloadedCount = 0;
-            int failDownloadedCount = 0;
-            int noImagesFoundCount = 0;
-            string prevText = txtBlockData.Text;
+            int currPic = imageToDownload;
+            int lastPic = totalImagesToDownload;
+            string prevText = cementedText;
 
-            foreach (ImageData imageFile in images)
+            ImageData imageFile = allImages[imageToDownload];
+
+
+            currStatus = $"{prevText}\n\nSuccessful downloads: {downloadedCount}\nFailed downloads: {failDownloadedCount}\nNo images found: {noImagesFoundCount}";
+            currPic++;
+            string status = $"Attempting to download image(s) for {imageFile.OriginalImage}\n";
+            txtBlockData.Text = $"{currStatus}\nDownloading image {currPic} of {lastPic}...\n";
+            try
             {
-                currStatus = $"{prevText}\n\nSuccessful downloads: {downloadedCount}\nFailed downloads: {failDownloadedCount}\nNo images found: {noImagesFoundCount}";
-                currPic++;
-                string status = $"Attempting to download image(s) for {imageFile.OriginalImage}\n";
-                txtBlockData.Text = $"{currStatus}\nDownloading image {currPic} of {lastPic}...\n";
+                string errorText = string.Empty;
 
-                try
+                if (imageFile.MatchingImages.Count > 0)
                 {
-                    string errorText = string.Empty;
+                    await Task.Run(() => errorText = ImageHelper.DownloadBestImage(imageFile.MatchingImages));
 
-                    if (imageFile.MatchingImages.Count > 0)
+                    if (string.IsNullOrEmpty(errorText))
                     {
-                        await Task.Run(() => errorText = ImageHelper.DownloadBestImage(imageFile.MatchingImages));
-
-                        if (string.IsNullOrEmpty(errorText))
-                        {
-                            status += "Successfully downloaded image!\n";
-                            downloadedCount++;
-                            imageFile.HasBeenDownloaded = true;
-                        }
-                        else
-                        {
-                            status += $"Failed to download image. {errorText}\n";
-                            failDownloadedCount++;
-                            imageFile.HasBeenDownloaded = false;
-                        }
+                        status += "Successfully downloaded image!\n";
+                        downloadedCount++;
+                        imageFile.HasBeenDownloaded = true;
                     }
                     else
                     {
-                        status += $"No matching images found.\n";
-                        imageFile.HasBeenDownloaded = null;
-                        noImagesFoundCount++;
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    failDownloadedCount++;
-                    imageFile.HasBeenDownloaded = false;
-
-                    if (ex.InnerException != null)
-                    {
-                        status += string.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
-                    }
-                    else
-                    {
-                        status += string.Format("Failed to download image!\n{0}\n", ex.Message);
+                        status += $"Failed to download image. {errorText}\n";
+                        failDownloadedCount++;
+                        imageFile.HasBeenDownloaded = false;
+                        Utilities.LogFailLoaded(imageFile.OriginalImage);
                     }
                 }
-                finally
+                else
                 {
-                    Utilities.LogDownload(status);
+                    status += $"No matching images found.\n";
+                    imageFile.HasBeenDownloaded = null;
+                    noImagesFoundCount++;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                failDownloadedCount++;
+                imageFile.HasBeenDownloaded = false;
+                Utilities.LogFailLoaded(imageFile.OriginalImage);
+
+                if (ex.InnerException != null)
+                {
+                    status += string.Format("Failed to download image!\n{0}\n{1}\n", ex.Message, ex.InnerException.Message);
+                }
+                else
+                {
+                    status += string.Format("Failed to download image!\n{0}\n", ex.Message);
                 }
             }
+            finally
+            {
+                Utilities.LogDownload(status);
+            }
+
 
             currStatus = $"{prevText}\n\nSuccessful downloads: {downloadedCount}\nFailed downloads: {failDownloadedCount}\nNo images found: {noImagesFoundCount}";
             txtBlockData.Text = $"{currStatus}\nFinished downloading images! Check log for more info!";
         }
 
-        private async Task SortNonLoadedImages(List<ImageData> images)
+        private async Task SortNonLoadedImage(int imageToSort, int totalImagesToSort)
         {
             List<ImageData> urls = new List<ImageData>();
             List<ImageData> files = new List<ImageData>();
+            ImageData image = allImages[imageToSort];
 
-            foreach (ImageData image in images)
-            {
                 if (image.HasBeenDownloaded == null || image.HasBeenDownloaded == false)
                 {
                     if (image.OriginalImageType == FileType.URL)
                     {
-                        urls.Add(image);
+                    await SortURL(image);
                     }
                     else if (image.OriginalImageType == FileType.Image)
                     {
-                        files.Add(image);
+                    await SortFile(image);
                     }
                 }
-            }
-
-            await SortFiles(files);
-            await SortURLs(urls);
         }
 
         // Sorta not loaded and fail loaded local images
-        private async Task SortFiles(List<ImageData> files)
+        private async Task SortFile(ImageData image)
         {
-            foreach (ImageData image in files)
+            try
             {
-                try
-                {
-                    string copyTo = string.Empty;
+                string copyTo = string.Empty;
 
-                    if (image.HasBeenDownloaded == null)
-                    {
-                        copyTo = Path.Combine(Utilities.GetNotLoadedDirectory(), Path.GetFileName(image.OriginalImage));
-                        Directory.CreateDirectory(Utilities.GetNotLoadedDirectory());
-                    }
-                    else if (image.HasBeenDownloaded == false)
-                    {
-                        copyTo = Path.Combine(Utilities.GetFailLoadedDirectory(), Path.GetFileName(image.OriginalImage));
-                        Directory.CreateDirectory(Utilities.GetFailLoadedDirectory());
-                    }
-
-                    await Task.Run(() => File.Copy(image.OriginalImage, copyTo));// Try to copy
-                }
-                catch (IOException ex)
+                if (image.HasBeenDownloaded == null)
                 {
-                    Utilities.LogSort($"Failed to move the following file: {image.OriginalImage}\n{ex.Message}\n");
+                    copyTo = Path.Combine(Utilities.GetNotLoadedDirectory(), Path.GetFileName(image.OriginalImage));
+                    Directory.CreateDirectory(Utilities.GetNotLoadedDirectory());
                 }
+                else if (image.HasBeenDownloaded == false)
+                {
+                    copyTo = Path.Combine(Utilities.GetFailLoadedDirectory(), Path.GetFileName(image.OriginalImage));
+                    Directory.CreateDirectory(Utilities.GetFailLoadedDirectory());
+                }
+
+                await Task.Run(() => File.Copy(image.OriginalImage, copyTo, true));// Try to copy
+            }
+            catch (IOException ex)
+            {
+                Utilities.LogSort($"Failed to move the following file: {image.OriginalImage}\n{ex.Message}\n");
             }
         }
 
         // Sorts not loaded and fail loaded URL images
-        private async Task SortURLs(List<ImageData> urls)
+        private async Task SortURL(ImageData image)
         {
-            foreach (ImageData image in urls)
-            {
                 try
                 {
                     if (image.HasBeenDownloaded == null)
@@ -639,7 +823,6 @@ namespace MikuDownloader
                 {
                     Utilities.LogSort($"Failed to download image from original URL: {image.OriginalImage}\n{ex.Message}\n");
                 }
-            }
         }
 
         // Changes the gif image to a random one from Resources
